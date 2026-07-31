@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — Wage Counter</title>
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #161b22;
+    --bg-vignette: #0f1319;
+    --paper: #efe9db;
+    --paper-2: #e5ddc8;
+    --ink: #24261f;
+    --ink-soft: #5b5c4e;
+    --brass: #c69a2b;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0; min-height:100vh;
+    background: radial-gradient(ellipse at 50% -10%, #232b38 0%, var(--bg) 45%, var(--bg-vignette) 100%);
+    font-family: 'Work Sans', sans-serif;
+    color: var(--paper);
+  }
+  body{ display:flex; justify-content:center; padding: 48px 18px 80px; }
+  .wrap{ width:100%; max-width: 720px; }
+  .eyebrow{
+    font-family:'Oswald', sans-serif; font-weight:600; letter-spacing:0.32em;
+    text-transform:uppercase; font-size:12.5px; color:#ddc27a; text-align:center; margin:0 0 6px;
+  }
+  h1{
+    font-family:'Oswald', sans-serif; font-weight:700; font-size: clamp(26px, 5vw, 36px);
+    text-align:center; margin: 0 0 34px; color:#f2eee2;
+  }
+  .card{
+    background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+    color: var(--ink); border-radius: 14px; padding: 34px clamp(20px, 5vw, 42px) 42px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.55);
+    position: relative; overflow: hidden;
+  }
+  .card::before{
+    content:""; position:absolute; top:0; left:0; right:0; height:6px;
+    background: repeating-linear-gradient(90deg, var(--brass) 0 18px, var(--ink) 18px 20px);
+    opacity:0.85;
+  }
+  h2{
+    font-family:'Oswald', sans-serif; font-size: 15px; text-transform:uppercase;
+    letter-spacing:0.1em; margin: 28px 0 10px; color: var(--ink);
+  }
+  h2:first-of-type{ margin-top: 6px; }
+  p, li{ line-height:1.6; font-size:15px; color: var(--ink); }
+  ul{ margin: 8px 0; padding-left: 22px; }
+  .updated{ font-size: 13px; color: var(--ink-soft); margin-top: -6px; margin-bottom: 20px; }
+  a{ color: #8a5a1a; }
+  footer{
+    text-align:center; margin-top: 22px; font-size: 11.5px; color: #8b93a1; letter-spacing:0.04em;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">Wage Counter</p>
+  <h1>Privacy Policy</h1>
+  <div class="card">
+    <p class="updated">Last updated: July 2026</p>
+
+    <p>Wage Counter ("the app") is a simple time-and-earnings tracker. This page explains what information the app handles and how.</p>
+
+    <h2>What the app stores</h2>
+    <p>The app stores the following information <strong>only on your own device</strong>, using your browser's or device's local storage:</p>
+    <ul>
+      <li>Your hourly wage</li>
+      <li>Start and planned end times you enter</li>
+      <li>Overtime rate settings you configure</li>
+      <li>Pause/resume state</li>
+    </ul>
+
+    <h2>What the app does not do</h2>
+    <ul>
+      <li>The app does not send any of this information to a server.</li>
+      <li>The app does not use analytics, advertising, or tracking of any kind.</li>
+      <li>The app does not collect your name, location, contacts, or any other personal data.</li>
+      <li>The app does not share data with third parties, because it does not collect any data to share.</li>
+    </ul>
+
+    <h2>Data control</h2>
+    <p>Since all data stays on your device, you are always in control of it. Clearing the app's storage (through your browser or device settings, or by uninstalling the app) permanently deletes this information. There is no account, server, or backup involved.</p>
+
+    <h2>Permissions</h2>
+    <p>The app does not request access to your camera, microphone, contacts, location, or any other device permissions.</p>
+
+    <h2>Changes to this policy</h2>
+    <p>If this policy changes in the future, the updated version will be published at this same address.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about this policy can be directed to the app developer via the contact details listed on the app's store page.</p>
+  </div>
+  <footer>Wage Counter · Privacy Policy</footer>
+</div>
+</body>
+</html>
