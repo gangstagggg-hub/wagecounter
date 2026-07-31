@@ -1,8 +1,0 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "no.wagecounter.app",
-        "sha256_cert_fingerprints": ["FA:D8:DD:9D:E2:9E:EB:06:A0:63:6D:44:8F:BF:E9:1E:ED:34:B9:04:55:30:7A:33:3C:B3:66:AB:76:AF:AE:9F"]
-      }
-    }]
