@@ -3,6 +3,7 @@
       "target": {
         "namespace": "android_app",
         "package_name": "no.wagecounter.app",
-        "sha256_cert_fingerprints": ["FA:D8:DD:9D:E2:9E:EB:06:A0:63:6D:44:8F:BF:E9:1E:ED:34:B9:04:55:30:7A:33:3C:B3:66:AB:76:AF:AE:9F"]
+        "sha256_cert_fingerprints": ["E9:1F:43:D0:D0:16:1A:7F:D2:41:4B:8B:F5:E7:13:38:5B:26:98:49:3B:9B:51:1E:BD:C0:B3:61:61:26:06:83"]
       }
     }]
+
