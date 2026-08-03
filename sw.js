@@ -1,4 +1,4 @@
-const v3 = 'lonnsteller-cache-v1';
+const v4 = 'lonnsteller-cache-v1';
 const ASSETS = [
   './',
   './index.html',
@@ -9,7 +9,7 @@ const ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(v3).then((cache) => cache.addAll(ASSETS))
+    caches.open(v4).then((cache) => cache.addAll(ASSETS))
   );
   self.skipWaiting();
 });
@@ -17,7 +17,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== v3).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k !== v4).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
@@ -35,7 +35,7 @@ self.addEventListener('fetch', (event) => {
         .then((res) => {
           if (res && res.status === 200 && req.method === 'GET') {
             const resClone = res.clone();
-            caches.open(v3).then((cache) => cache.put(req, resClone));
+            caches.open(v4).then((cache) => cache.put(req, resClone));
           }
           return res;
         })
