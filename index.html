@@ -326,6 +326,36 @@
     letter-spacing: 0.04em;
   }
 
+  .install-banner{
+    display:none;
+    align-items:center;
+    justify-content:space-between;
+    gap: 14px;
+    background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+    color: var(--ink);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 22px;
+    box-shadow: 0 12px 30px -12px rgba(0,0,0,0.4);
+  }
+  .install-banner.show{ display:flex; }
+  .install-banner p{
+    margin:0;
+    font-size: 13.5px;
+    line-height:1.4;
+  }
+  .install-banner strong{ display:block; font-family:'Oswald', sans-serif; font-size:13px; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:2px; }
+  .install-banner button{
+    flex-shrink:0;
+    width:auto;
+    padding: 10px 18px;
+    font-size:12.5px;
+  }
+  .install-dismiss{
+    background:none; border:none; color: var(--ink-soft);
+    font-size: 18px; line-height:1; cursor:pointer; padding: 0 4px; width:auto;
+  }
+
   @media (prefers-reduced-motion: reduce){
     .seg{ transition:none; }
   }
@@ -335,6 +365,12 @@
 <div class="wrap">
   <p class="eyebrow">Timesheet</p>
   <h1>Wage Counter</h1>
+
+  <div class="install-banner" id="installBanner">
+    <p><strong>Install this app</strong>Get a full-screen app with no browser bar, and offline access.</p>
+    <button id="installBtn">Install</button>
+    <button class="install-dismiss" id="installDismiss" aria-label="Dismiss">✕</button>
+  </div>
 
   <div class="card">
     <div class="punch"><span id="punchDate">—</span><span id="punchClock">—</span></div>
@@ -740,6 +776,41 @@
       navigator.serviceWorker.register('sw.js').catch(() => {/* fail silently, app still works online */});
     });
   }
+
+  // --- Install prompt (shows a custom "Install" button instead of relying on the browser menu) ---
+  const installBanner = document.getElementById('installBanner');
+  const installBtn = document.getElementById('installBtn');
+  const installDismiss = document.getElementById('installDismiss');
+  let deferredInstallPrompt = null;
+
+  function isStandalone(){
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+
+  if(!isStandalone() && sessionStorage.getItem('installDismissed') !== '1'){
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      installBanner.classList.add('show');
+    });
+  }
+
+  installBtn && installBtn.addEventListener('click', async () => {
+    if(!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installBanner.classList.remove('show');
+  });
+
+  installDismiss && installDismiss.addEventListener('click', () => {
+    installBanner.classList.remove('show');
+    sessionStorage.setItem('installDismissed', '1');
+  });
+
+  window.addEventListener('appinstalled', () => {
+    installBanner.classList.remove('show');
+  });
 </script>
 </body>
 </html>
