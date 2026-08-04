@@ -198,6 +198,9 @@
   button.btn-stop{ background: var(--rust); color: var(--paper); }
   button.btn-stop:hover{ background:#a63d28; }
 
+  button.btn-reset-mode{ background: var(--rust); color: var(--paper); }
+  button.btn-reset-mode:hover{ background:#a63d28; }
+
   .total-bar{
     display:flex; align-items:baseline; justify-content:center; gap: 10px;
     margin-top: 20px;
@@ -631,14 +634,29 @@
     }
   }
 
-  // restore saved state, otherwise default start = now
-  const restored = loadState();
-  if(!restored || !startInput.value){
-    startInput.value = toLocalInputValue(new Date());
+  // toggles the Start button between "Start now" (no active session) and
+  // "Reset" (a session is running or paused) — Reset clears it back to 0
+  function updateStartButtonLabel(){
+    const hasSession = startInput.value !== '' && !isNaN(new Date(startInput.value));
+    startBtn.textContent = hasSession ? 'Reset' : 'Start now';
+    startBtn.classList.toggle('btn-reset-mode', hasSession);
   }
 
+  // restore saved state — leave start blank if nothing was saved or if it
+  // was intentionally reset; the counter only begins once "Start now" is pressed
+  loadState();
+
   startBtn.addEventListener('click', () => {
-    startInput.value = toLocalInputValue(new Date());
+    const hasSession = startInput.value !== '' && !isNaN(new Date(startInput.value));
+    if(hasSession){
+      // Reset: clear the running session entirely — back to 0, won't count
+      // again until "Start now" is pressed
+      startInput.value = '';
+      endInput.value = '';
+    } else {
+      // Start now
+      startInput.value = toLocalInputValue(new Date());
+    }
     isPaused = false;
     pausedAt = null;
     totalPausedMs = 0;
@@ -804,6 +822,7 @@
   }
 
   function render(){
+    updateStartButtonLabel();
     const wage = parseFloat(wageInput.value);
     const start = new Date(startInput.value);
     const realNow = new Date();
