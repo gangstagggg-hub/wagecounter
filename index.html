@@ -195,6 +195,45 @@
   button.btn-pause.is-paused{ background: var(--rust); color: var(--paper); }
   button.btn-pause.is-paused:hover{ background:#a63d28; }
 
+  button.btn-stop{ background: var(--rust); color: var(--paper); }
+  button.btn-stop:hover{ background:#a63d28; }
+
+  .total-bar{
+    display:flex; align-items:baseline; justify-content:center; gap: 10px;
+    margin-top: 20px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .total-bar .total-label{ letter-spacing:0.04em; }
+  .total-bar .total-value{ color:#ddc27a; font-weight:600; font-size: 15px; }
+  .total-reset{
+    width:auto; padding: 3px 11px; font-size: 10.5px;
+    background: transparent; border: 1px solid rgba(139,147,161,0.4); color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .total-reset:hover{ background: rgba(139,147,161,0.15); }
+
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background: rgba(15,19,25,0.72);
+    align-items:center; justify-content:center; padding: 20px; z-index: 60;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal-box{
+    background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+    color: var(--ink); border-radius: 14px; padding: 26px 24px; max-width: 380px; width:100%;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6);
+  }
+  .modal-box h3{ font-family:'Oswald', sans-serif; margin:0 0 10px; font-size:18px; }
+  .modal-box p{ font-size:13.5px; color: var(--ink-soft); margin: 0 0 20px; line-height:1.5; }
+  .modal-actions{ display:flex; flex-direction:column; gap:8px; }
+  .modal-actions button{ width:100%; }
+  .modal-cancel{
+    background:none; color:var(--ink-soft); text-decoration:underline;
+    font-weight:400; text-transform:none; letter-spacing:0; padding:6px;
+  }
+  .modal-cancel:hover{ background:none; color: var(--ink); }
+
   .row.btnrow-outer{ margin-bottom: 22px; }
   .row.btnrow-outer .field{ flex: 1 1 160px; }
 
@@ -403,6 +442,9 @@
       <div class="field btnrow">
         <button id="pauseBtn" class="btn-pause">Pause</button>
       </div>
+      <div class="field btnrow">
+        <button id="stopBtn" class="btn-stop">Stop</button>
+      </div>
     </div>
 
     <div class="section-label">Overtime rules</div>
@@ -471,11 +513,44 @@
   </div>
 
   <footer>Updates automatically · change the start time anytime</footer>
+
+  <div class="total-bar">
+    <span class="total-label">Saved total:</span>
+    <span class="total-value" id="totalValue">0</span>
+    <button class="total-reset" id="resetTotalBtn">Reset</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="stopModal">
+  <div class="modal-box">
+    <h3>Stop this session?</h3>
+    <p>Save this session's earnings to your saved total before stopping?</p>
+    <div class="modal-actions">
+      <button id="stopSaveBtn">Save &amp; stop</button>
+      <button id="stopDiscardBtn" class="btn-stop">Discard &amp; stop</button>
+      <button id="stopCancelBtn" class="modal-cancel">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <script>
   // --- Storage (localStorage) ---
   const STORAGE_KEY = 'wage-counter-state-v2';
+  const TOTAL_STORAGE_KEY = 'wage-counter-saved-total-v1';
+
+  let savedTotal = 0;
+  function loadSavedTotal(){
+    try{
+      const raw = localStorage.getItem(TOTAL_STORAGE_KEY);
+      savedTotal = raw ? (parseFloat(raw) || 0) : 0;
+    }catch(e){ savedTotal = 0; }
+  }
+  function persistSavedTotal(){
+    try{ localStorage.setItem(TOTAL_STORAGE_KEY, String(savedTotal)); }catch(e){ /* ignore */ }
+  }
+  function renderSavedTotal(){
+    document.getElementById('totalValue').textContent = savedTotal.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
 
   function saveState(){
     try{
@@ -518,6 +593,12 @@
   const endInput = document.getElementById('endInput');
   const startBtn = document.getElementById('startBtn');
   const pauseBtn = document.getElementById('pauseBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const stopModal = document.getElementById('stopModal');
+  const stopSaveBtn = document.getElementById('stopSaveBtn');
+  const stopDiscardBtn = document.getElementById('stopDiscardBtn');
+  const stopCancelBtn = document.getElementById('stopCancelBtn');
+  const resetTotalBtn = document.getElementById('resetTotalBtn');
   const ot1HoursInput = document.getElementById('ot1Hours');
   const ot1PctInput = document.getElementById('ot1Pct');
   const ot2HoursInput = document.getElementById('ot2Hours');
@@ -578,6 +659,52 @@
     setPauseButtonState();
     saveState();
     render();
+  });
+
+  // --- Stop button: ends the current session, optionally banking its earnings ---
+  function endCurrentSession(){
+    startInput.value = '';
+    endInput.value = '';
+    isPaused = false;
+    pausedAt = null;
+    totalPausedMs = 0;
+    setPauseButtonState();
+    saveState();
+    render();
+  }
+
+  stopBtn.addEventListener('click', () => {
+    stopModal.classList.add('show');
+  });
+
+  stopCancelBtn.addEventListener('click', () => {
+    stopModal.classList.remove('show');
+  });
+
+  stopSaveBtn.addEventListener('click', () => {
+    const wage = parseFloat(wageInput.value);
+    const start = new Date(startInput.value);
+    const now = getEffectiveNow();
+    if(!isNaN(start) && wage > 0 && now > start){
+      const settings = getSettings();
+      const data = computeAll(start, now, wage, settings);
+      savedTotal += data.totalKr;
+      persistSavedTotal();
+      renderSavedTotal();
+    }
+    stopModal.classList.remove('show');
+    endCurrentSession();
+  });
+
+  stopDiscardBtn.addEventListener('click', () => {
+    stopModal.classList.remove('show');
+    endCurrentSession();
+  });
+
+  resetTotalBtn.addEventListener('click', () => {
+    savedTotal = 0;
+    persistSavedTotal();
+    renderSavedTotal();
   });
 
   wageInput.addEventListener('input', () => { saveState(); render(); });
@@ -767,6 +894,8 @@
   }
 
   setPauseButtonState();
+  loadSavedTotal();
+  renderSavedTotal();
   render();
   setInterval(render, 1000);
 
