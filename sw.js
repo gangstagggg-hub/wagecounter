@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lonnsteller-cache-v1';
+const CACHE_NAME = 'lonnsteller-cache-v5';
 const ASSETS = [
   './',
   './index.html',
