@@ -249,18 +249,6 @@
     margin: 2px 0 10px;
   }
 
-  .planned{
-    text-align:center;
-    padding: 14px 16px;
-    margin-bottom: 22px;
-    border-radius: 10px;
-    background: rgba(198,154,43,0.10);
-    border: 1.5px dashed rgba(198,154,43,0.5);
-  }
-  .planned .hero-label{ margin-bottom: 6px; }
-  .planned .kr-display{ font-size: clamp(24px, 6vw, 34px); }
-  .planned .hero-sub{ margin-top: 6px; }
-
   .paused-flag{
     display:inline-block;
     margin-left: 8px;
@@ -433,10 +421,11 @@
         <input type="datetime-local" id="startInput">
       </div>
       <div class="field">
-        <label for="endInput">Planned end time</label>
+        <label for="endInput">End time</label>
         <input type="datetime-local" id="endInput">
       </div>
     </div>
+    <p class="hint" style="margin-top:-14px; margin-bottom:22px; text-align:left;">Leave End time blank to keep counting live from now. Enter both a past Start and End time to calculate an already-worked shift.</p>
 
     <div class="row btnrow-outer">
       <div class="field btnrow">
@@ -470,12 +459,6 @@
         <label for="ot2Pct">Overtime 2 rate (%)</label>
         <input type="number" id="ot2Pct" min="0" step="1" placeholder="e.g. 100" value="">
       </div>
-    </div>
-
-    <div class="planned" id="plannedBox" style="display:none;">
-      <div class="hero-label">Planned pay until end time</div>
-      <div class="kr-display"><span id="krPlannedWhole">0</span><span class="oere">,<span id="krPlannedOere">00</span></span></div>
-      <div class="hero-sub" id="plannedSub"></div>
     </div>
 
     <div class="timeline-wrap">
@@ -624,6 +607,20 @@
     return new Date(reference.getTime() - totalPausedMs);
   }
 
+  // the moment used for all earnings calculations: an explicit End time if
+  // one is entered (e.g. to work out an already-finished past shift), or
+  // the live, pause-aware "now" if End time is left blank
+  function getCalcEnd(){
+    const endVal = new Date(endInput.value);
+    if(endInput.value !== '' && !isNaN(endVal)) return endVal;
+    return getEffectiveNow();
+  }
+
+  function hasExplicitEnd(){
+    const endVal = new Date(endInput.value);
+    return endInput.value !== '' && !isNaN(endVal);
+  }
+
   function setPauseButtonState(){
     if(isPaused){
       pauseBtn.textContent = 'Resume';
@@ -702,10 +699,10 @@
   stopSaveBtn.addEventListener('click', () => {
     const wage = parseFloat(wageInput.value);
     const start = new Date(startInput.value);
-    const now = getEffectiveNow();
-    if(!isNaN(start) && wage > 0 && now > start){
+    const calcEnd = getCalcEnd();
+    if(!isNaN(start) && wage > 0 && calcEnd > start){
       const settings = getSettings();
-      const data = computeAll(start, now, wage, settings);
+      const data = computeAll(start, calcEnd, wage, settings);
       savedTotal += data.totalKr;
       persistSavedTotal();
       renderSavedTotal();
@@ -826,7 +823,7 @@
     const wage = parseFloat(wageInput.value);
     const start = new Date(startInput.value);
     const realNow = new Date();
-    const now = getEffectiveNow(); // accounts for pause
+    const now = getCalcEnd(); // explicit End time if set, otherwise live pause-aware "now"
     const settings = getSettings();
 
     document.getElementById('punchDate').textContent = realNow.toLocaleDateString('en-GB', {weekday:'short', day:'2-digit', month:'2-digit'});
@@ -846,25 +843,12 @@
       document.getElementById('hintText').textContent = msg;
     }
 
-    // planned pay until end time (independent of pause/now status)
-    const plannedBox = document.getElementById('plannedBox');
-    const endVal = new Date(endInput.value);
-    if(!isNaN(start) && !isNaN(endVal) && endVal > start && wage > 0){
-      const plannedData = computeAll(start, endVal, wage, settings);
-      plannedBox.style.display = '';
-      const pWhole = Math.floor(plannedData.totalKr);
-      const pOere = Math.round((plannedData.totalKr - pWhole)*100);
-      document.getElementById('krPlannedWhole').textContent = pWhole.toLocaleString('en-GB');
-      document.getElementById('krPlannedOere').textContent = String(pOere).padStart(2,'0');
-      document.getElementById('plannedSub').textContent = `${fmtHM(plannedData.totalHours)} total · ends at ${endVal.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}`;
-    } else {
-      plannedBox.style.display = 'none';
-    }
-
     if(isNaN(start) || !wage || wage <= 0 || start >= now){
-      document.getElementById('heroSub').textContent = start >= now
-        ? 'Start time is in the future'
-        : 'Set hourly wage and start time to begin';
+      let msg = 'Set hourly wage and start time to begin';
+      if(!isNaN(start) && wage > 0 && start >= now){
+        msg = hasExplicitEnd() ? 'End time must be after start time' : 'Start time is in the future';
+      }
+      document.getElementById('heroSub').textContent = msg;
       document.getElementById('krWhole').textContent = '0';
       document.getElementById('krOere').textContent = '00';
       document.getElementById('elapsedLabel').textContent = '0h 00m';
@@ -883,8 +867,9 @@
     document.getElementById('krOere').textContent = String(oere).padStart(2,'0');
 
     const dowText = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][start.getDay()];
-    const pauseFlag = isPaused ? '<span class="paused-flag">· PAUSED</span>' : '';
-    document.getElementById('heroSub').innerHTML = `Started <b>${dowText} ${start.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</b> · ${fmtHM(data.totalHours)} worked ${pauseFlag}`;
+    const pauseFlag = isPaused && !hasExplicitEnd() ? '<span class="paused-flag">· PAUSED</span>' : '';
+    const endFlag = hasExplicitEnd() ? ` · ended ${now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}` : '';
+    document.getElementById('heroSub').innerHTML = `Started <b>${dowText} ${start.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</b> · ${fmtHM(data.totalHours)} worked${endFlag} ${pauseFlag}`;
 
     document.getElementById('elapsedLabel').textContent = fmtHM(data.totalHours);
 
