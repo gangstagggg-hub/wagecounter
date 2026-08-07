@@ -727,6 +727,27 @@
   startInput.addEventListener('change', () => { saveState(); render(); });
   endInput.addEventListener('input', () => { saveState(); render(); });
   endInput.addEventListener('change', () => { saveState(); render(); });
+
+  // when tapping an empty Start/End field, pre-fill a sensible default
+  // time (07:00 / 15:00 today) instead of leaving it blank
+  startInput.addEventListener('focus', () => {
+    if(startInput.value === ''){
+      const d = new Date();
+      d.setHours(7, 0, 0, 0);
+      startInput.value = toLocalInputValue(d);
+      saveState();
+      render();
+    }
+  });
+  endInput.addEventListener('focus', () => {
+    if(endInput.value === ''){
+      const d = new Date();
+      d.setHours(15, 0, 0, 0);
+      endInput.value = toLocalInputValue(d);
+      saveState();
+      render();
+    }
+  });
   ot1HoursInput.addEventListener('input', () => { saveState(); render(); });
   ot1PctInput.addEventListener('input', () => { saveState(); render(); });
   ot2HoursInput.addEventListener('input', () => { saveState(); render(); });
