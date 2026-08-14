@@ -237,6 +237,153 @@
   }
   .modal-cancel:hover{ background:none; color: var(--ink); }
 
+  .modal-box label{ text-align:left; }
+  .modal-box textarea{
+    width:100%;
+    font-family:'Work Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 12px;
+    border-radius: 7px;
+    border: 1.5px solid rgba(36,38,31,0.22);
+    background: #fbf9f3;
+    color: var(--ink);
+    outline: none;
+    resize: vertical;
+    min-height: 56px;
+    margin: 6px 0 18px;
+    box-sizing: border-box;
+  }
+  .modal-box textarea:focus{ border-color: var(--brass); box-shadow: 0 0 0 3px rgba(198,154,43,0.22); }
+
+  /* --- Overview link / navigation --- */
+  .overview-link-row{ text-align:center; margin-top: 16px; }
+  .overview-link{
+    width:auto; background:none; color: var(--brass-soft);
+    text-decoration: underline; text-underline-offset: 3px;
+    font-family:'Oswald', sans-serif; font-size: 12.5px;
+    letter-spacing: 0.1em; text-transform: uppercase; padding: 8px;
+  }
+  .overview-link:hover{ background:none; color: #f2eee2; }
+
+  /* --- Overview screen --- */
+  #overviewView{ display:none; }
+  .overview-topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom: 18px;
+  }
+  .overview-topbar button{
+    width:auto; padding: 10px 16px; font-size: 12.5px;
+  }
+
+  .selection-summary{
+    display:none;
+    align-items:center; justify-content:space-between; gap:12px;
+    background: rgba(198,154,43,0.14);
+    border: 1.5px dashed rgba(198,154,43,0.55);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    color: var(--paper);
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+  .selection-summary.show{ display:flex; }
+  .selection-summary .sel-value{ color: var(--brass-soft); font-weight:700; font-size:16px; }
+  .selection-summary button{ width:auto; padding: 7px 12px; font-size: 11px; }
+
+  .week-empty{
+    text-align:center; color: var(--muted); font-size: 13.5px;
+    padding: 40px 10px; line-height:1.6;
+  }
+
+  .week-card{
+    width:100%;
+    display:flex; align-items:center; justify-content:space-between; gap: 12px;
+    background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+    color: var(--ink);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    text-align:left;
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 400;
+    transition: border-color .12s ease, transform .1s ease;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .week-card:active{ transform: scale(0.98); }
+  .week-card.selected{ border-color: var(--brass); box-shadow: 0 0 0 3px rgba(198,154,43,0.25); }
+  .week-card .week-main{ font-family:'Oswald', sans-serif; font-weight:600; font-size: 15px; }
+  .week-card .week-range{ font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; font-family:'IBM Plex Mono', monospace; }
+  .week-card .week-stats{ text-align:right; font-family:'IBM Plex Mono', monospace; }
+  .week-card .week-amount{ font-weight:700; font-size: 16px; }
+  .week-card .week-hours{ font-size: 11.5px; color: var(--ink-soft); margin-top:2px; }
+
+  .overview-hint{
+    text-align:center; color: var(--muted); font-size: 12px;
+    margin-top: 18px; line-height:1.6;
+  }
+
+  /* --- Week detail bottom sheet --- */
+  .sheet-overlay{
+    display:none; position:fixed; inset:0; background: rgba(15,19,25,0.6);
+    z-index: 70;
+  }
+  .sheet-overlay.show{ display:block; }
+  .sheet-panel{
+    position:fixed; left:0; right:0; bottom:0;
+    top: 8vh;
+    background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+    color: var(--ink);
+    border-radius: 18px 18px 0 0;
+    padding: 20px clamp(18px, 5vw, 34px) 26px;
+    box-shadow: 0 -20px 50px -10px rgba(0,0,0,0.5);
+    display:flex; flex-direction:column;
+    max-width: 640px; margin: 0 auto;
+  }
+  .sheet-handle{
+    width: 40px; height:4px; border-radius:2px;
+    background: rgba(36,38,31,0.25);
+    margin: 0 auto 14px;
+  }
+  .sheet-header{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    margin-bottom: 6px;
+  }
+  .sheet-header h3{ font-family:'Oswald', sans-serif; font-size:19px; margin:0; }
+  .sheet-header .sheet-range{ font-size:12px; color: var(--ink-soft); font-family:'IBM Plex Mono', monospace; margin-top:3px; }
+  .sheet-close{
+    width:auto; background:none; color: var(--ink-soft);
+    font-size: 20px; line-height:1; padding: 2px 8px;
+  }
+  .sheet-close:hover{ background: rgba(36,38,31,0.08); }
+  .sheet-total{
+    font-family:'IBM Plex Mono', monospace; font-size: 13.5px; color: var(--ink-soft);
+    margin: 10px 0 14px; padding-bottom: 12px; border-bottom: 1px dashed var(--line);
+  }
+  .sheet-total b{ color: var(--ink); font-size: 16px; }
+  .sheet-days{ overflow-y:auto; flex:1; }
+  .day-row{
+    padding: 12px 0; border-bottom: 1px solid var(--line);
+  }
+  .day-row:last-child{ border-bottom:none; }
+  .day-row-top{
+    display:flex; align-items:baseline; justify-content:space-between; gap: 10px;
+  }
+  .day-row .day-date{ font-family:'Oswald', sans-serif; font-weight:600; font-size: 14px; }
+  .day-row .day-stats{
+    font-family:'IBM Plex Mono', monospace; font-size: 13px; text-align:right; color: var(--ink-soft);
+    white-space:nowrap;
+  }
+  .day-row .day-stats b{ color: var(--ink); }
+  .day-row .day-comment{
+    margin-top: 5px; font-size: 12.5px; color: var(--ink-soft);
+    font-style: italic; line-height:1.4;
+  }
+
   .row.btnrow-outer{ margin-bottom: 22px; }
   .row.btnrow-outer .field{ flex: 1 1 160px; }
 
@@ -505,12 +652,54 @@
     <span class="total-value" id="totalValue">0</span>
     <button class="total-reset" id="resetTotalBtn">Reset</button>
   </div>
+
+  <div class="overview-link-row">
+    <button class="overview-link" id="overviewBtn">Overview</button>
+  </div>
+</div>
+
+<div class="wrap" id="overviewView">
+  <p class="eyebrow">Timesheet</p>
+  <h1>Overview</h1>
+
+  <div class="card">
+    <div class="overview-topbar">
+      <button id="mainPageBtn">← Main page</button>
+      <span style="width:1px"></span>
+    </div>
+
+    <div class="selection-summary" id="selectionSummary">
+      <span><span id="selCount">0</span> weeks selected · <span class="sel-value" id="selTotal">0</span></span>
+      <button id="selClearBtn" class="modal-cancel" style="text-decoration:underline;">Clear</button>
+    </div>
+
+    <div id="weeksList"></div>
+
+    <p class="overview-hint">Tap a week to see the daily breakdown. Double-tap a week to add it to a combined total — double-tap again to remove it.</p>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="sheetOverlay">
+  <div class="sheet-panel">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div>
+        <h3 id="sheetTitle">Week</h3>
+        <div class="sheet-range" id="sheetRange"></div>
+      </div>
+      <button class="sheet-close" id="sheetCloseBtn" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-total" id="sheetTotal"></div>
+    <div class="sheet-days" id="sheetDays"></div>
+  </div>
 </div>
 
 <div class="modal-overlay" id="stopModal">
   <div class="modal-box">
     <h3>Stop this session?</h3>
     <p>Save this session's earnings to your saved total before stopping?</p>
+    <label for="stopComment">Comment (optional)</label>
+    <textarea id="stopComment" placeholder="e.g. covered for Alex, extra busy shift…"></textarea>
     <div class="modal-actions">
       <button id="stopSaveBtn">Save &amp; stop</button>
       <button id="stopDiscardBtn" class="btn-stop">Discard &amp; stop</button>
@@ -536,6 +725,47 @@
   }
   function renderSavedTotal(){
     document.getElementById('totalValue').textContent = savedTotal.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  // --- Sessions log (for the Overview page: date, hours, amount, comment per saved shift) ---
+  const SESSIONS_STORAGE_KEY = 'wage-counter-sessions-v1';
+  let sessions = [];
+
+  function loadSessions(){
+    try{
+      const raw = localStorage.getItem(SESSIONS_STORAGE_KEY);
+      sessions = raw ? (JSON.parse(raw) || []) : [];
+    }catch(e){ sessions = []; }
+  }
+  function persistSessions(){
+    try{ localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions)); }catch(e){ /* ignore */ }
+  }
+
+  // ISO 8601 week number + week-year for a given date
+  function getISOWeekInfo(date){
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = (d.getUTCDay() + 6) % 7; // Mon=0..Sun=6
+    d.setUTCDate(d.getUTCDate() - dayNum + 3); // nearest Thursday
+    const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+    const firstDayNum = (firstThursday.getUTCDay() + 6) % 7;
+    firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNum + 3);
+    const weekNo = 1 + Math.round((d - firstThursday) / (7*24*3600*1000));
+    return { week: weekNo, year: d.getUTCFullYear() };
+  }
+  function weekKeyFor(date){
+    const info = getISOWeekInfo(date);
+    return `${info.year}-W${String(info.week).padStart(2,'0')}`;
+  }
+  // Monday 00:00 of the week containing `date` (local time)
+  function getWeekStart(date){
+    const d = new Date(date);
+    const day = (d.getDay() + 6) % 7; // Mon=0
+    d.setHours(0,0,0,0);
+    d.setDate(d.getDate() - day);
+    return d;
+  }
+  function fmtShortDate(d){
+    return d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
   }
 
   function saveState(){
@@ -688,6 +918,8 @@
     render();
   }
 
+  const stopComment = document.getElementById('stopComment');
+
   stopBtn.addEventListener('click', () => {
     stopModal.classList.add('show');
   });
@@ -706,12 +938,25 @@
       savedTotal += data.totalKr;
       persistSavedTotal();
       renderSavedTotal();
+
+      sessions.push({
+        id: 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2,8),
+        start: start.toISOString(),
+        end: calcEnd.toISOString(),
+        hours: data.totalHours,
+        amount: data.totalKr,
+        comment: stopComment.value.trim(),
+        weekKey: weekKeyFor(start)
+      });
+      persistSessions();
     }
+    stopComment.value = '';
     stopModal.classList.remove('show');
     endCurrentSession();
   });
 
   stopDiscardBtn.addEventListener('click', () => {
+    stopComment.value = '';
     stopModal.classList.remove('show');
     endCurrentSession();
   });
@@ -721,6 +966,184 @@
     persistSavedTotal();
     renderSavedTotal();
   });
+
+  // --- Overview page: navigation, weekly summary cards, day-detail sheet,
+  //     and double-tap multi-week selection for a combined total ---
+  const mainView = document.querySelector('body > div.wrap:not(#overviewView)');
+  const overviewView = document.getElementById('overviewView');
+  const overviewBtn = document.getElementById('overviewBtn');
+  const mainPageBtn = document.getElementById('mainPageBtn');
+  const weeksList = document.getElementById('weeksList');
+  const selectionSummary = document.getElementById('selectionSummary');
+  const selCount = document.getElementById('selCount');
+  const selTotal = document.getElementById('selTotal');
+  const selClearBtn = document.getElementById('selClearBtn');
+  const sheetOverlay = document.getElementById('sheetOverlay');
+  const sheetTitle = document.getElementById('sheetTitle');
+  const sheetRange = document.getElementById('sheetRange');
+  const sheetTotal = document.getElementById('sheetTotal');
+  const sheetDays = document.getElementById('sheetDays');
+  const sheetCloseBtn = document.getElementById('sheetCloseBtn');
+
+  let selectedWeeks = new Set();
+  const weekClickTimers = {};
+  const DOUBLE_TAP_MS = 320;
+
+  function showOverview(){
+    mainView.style.display = 'none';
+    overviewView.style.display = 'block';
+    renderOverview();
+  }
+  function showMain(){
+    overviewView.style.display = 'none';
+    mainView.style.display = '';
+  }
+
+  overviewBtn.addEventListener('click', showOverview);
+  mainPageBtn.addEventListener('click', showMain);
+
+  function groupSessionsByWeek(){
+    const groups = {};
+    sessions.forEach(s => {
+      if(!groups[s.weekKey]) groups[s.weekKey] = [];
+      groups[s.weekKey].push(s);
+    });
+    return groups;
+  }
+
+  function renderOverview(){
+    const groups = groupSessionsByWeek();
+    const weekKeys = Object.keys(groups).sort().reverse(); // most recent week first
+
+    weeksList.innerHTML = '';
+
+    if(weekKeys.length === 0){
+      weeksList.innerHTML = '<p class="week-empty">No sessions saved yet.<br>Use Stop → Save &amp; stop to log a shift here.</p>';
+      updateSelectionSummary();
+      return;
+    }
+
+    weekKeys.forEach(weekKey => {
+      const weekSessions = groups[weekKey];
+      const totalAmount = weekSessions.reduce((sum, s) => sum + s.amount, 0);
+      const totalHours = weekSessions.reduce((sum, s) => sum + s.hours, 0);
+      const firstStart = new Date(weekSessions[0].start);
+      const weekStart = getWeekStart(firstStart);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      const info = getISOWeekInfo(firstStart);
+
+      const card = document.createElement('button');
+      card.className = 'week-card' + (selectedWeeks.has(weekKey) ? ' selected' : '');
+      card.innerHTML = `
+        <div>
+          <div class="week-main">Week ${info.week} · ${info.year}</div>
+          <div class="week-range">${fmtShortDate(weekStart)} – ${fmtShortDate(weekEnd)}</div>
+        </div>
+        <div class="week-stats">
+          <div class="week-amount">${totalAmount.toLocaleString('en-GB', {maximumFractionDigits:0})}</div>
+          <div class="week-hours">${fmtHM(totalHours)} · ${weekSessions.length} shift${weekSessions.length===1?'':'s'}</div>
+        </div>
+      `;
+      card.addEventListener('click', () => handleWeekClick(weekKey));
+      weeksList.appendChild(card);
+    });
+
+    updateSelectionSummary();
+  }
+
+  function handleWeekClick(weekKey){
+    if(weekClickTimers[weekKey]){
+      // second click within the window — treat as a double-tap: toggle selection
+      clearTimeout(weekClickTimers[weekKey]);
+      delete weekClickTimers[weekKey];
+      toggleWeekSelection(weekKey);
+    } else {
+      weekClickTimers[weekKey] = setTimeout(() => {
+        delete weekClickTimers[weekKey];
+        openWeekDetail(weekKey);
+      }, DOUBLE_TAP_MS);
+    }
+  }
+
+  function toggleWeekSelection(weekKey){
+    if(selectedWeeks.has(weekKey)) selectedWeeks.delete(weekKey);
+    else selectedWeeks.add(weekKey);
+    renderOverview();
+  }
+
+  function updateSelectionSummary(){
+    if(selectedWeeks.size === 0){
+      selectionSummary.classList.remove('show');
+      return;
+    }
+    const groups = groupSessionsByWeek();
+    let total = 0;
+    selectedWeeks.forEach(wk => {
+      (groups[wk] || []).forEach(s => { total += s.amount; });
+    });
+    selCount.textContent = selectedWeeks.size;
+    selTotal.textContent = total.toLocaleString('en-GB', {maximumFractionDigits:0});
+    selectionSummary.classList.add('show');
+  }
+
+  selClearBtn.addEventListener('click', () => {
+    selectedWeeks.clear();
+    renderOverview();
+  });
+
+  function openWeekDetail(weekKey){
+    const groups = groupSessionsByWeek();
+    const weekSessions = (groups[weekKey] || []).slice().sort((a,b) => new Date(a.start) - new Date(b.start));
+    if(weekSessions.length === 0) return;
+
+    const firstStart = new Date(weekSessions[0].start);
+    const info = getISOWeekInfo(firstStart);
+    const weekStart = getWeekStart(firstStart);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+
+    sheetTitle.textContent = `Week ${info.week} · ${info.year}`;
+    sheetRange.textContent = `${fmtShortDate(weekStart)} – ${fmtShortDate(weekEnd)}`;
+
+    const totalAmount = weekSessions.reduce((sum, s) => sum + s.amount, 0);
+    const totalHours = weekSessions.reduce((sum, s) => sum + s.hours, 0);
+    sheetTotal.innerHTML = `${fmtHM(totalHours)} total · <b>${totalAmount.toLocaleString('en-GB',{maximumFractionDigits:0})}</b> earned`;
+
+    sheetDays.innerHTML = '';
+    weekSessions.forEach(s => {
+      const d = new Date(s.start);
+      const dow = d.toLocaleDateString('en-GB', {weekday:'long'});
+      const dateStr = d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+      const row = document.createElement('div');
+      row.className = 'day-row';
+      row.innerHTML = `
+        <div class="day-row-top">
+          <span class="day-date">${dow}, ${dateStr}</span>
+          <span class="day-stats"><b>${s.amount.toLocaleString('en-GB',{maximumFractionDigits:0})}</b> · ${fmtHM(s.hours)}</span>
+        </div>
+        ${s.comment ? `<div class="day-comment">"${escapeHtml(s.comment)}"</div>` : ''}
+      `;
+      sheetDays.appendChild(row);
+    });
+
+    sheetOverlay.classList.add('show');
+  }
+
+  function closeWeekDetail(){
+    sheetOverlay.classList.remove('show');
+  }
+
+  sheetCloseBtn.addEventListener('click', closeWeekDetail);
+  sheetOverlay.addEventListener('click', (e) => {
+    if(e.target === sheetOverlay) closeWeekDetail();
+  });
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
 
   wageInput.addEventListener('input', () => { saveState(); render(); });
   startInput.addEventListener('input', () => { saveState(); render(); });
@@ -921,6 +1344,7 @@
   setPauseButtonState();
   loadSavedTotal();
   renderSavedTotal();
+  loadSessions();
   render();
   setInterval(render, 1000);
 
