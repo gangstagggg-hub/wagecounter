@@ -26,6 +26,7 @@
     --brass-soft: #ddc27a;
     --amber: #e08a2e;
     --rust: #c04a32;
+    --manual: #5c8a8d;
     --muted: #8b93a1;
     --line: rgba(36,38,31,0.14);
   }
@@ -152,7 +153,7 @@
     margin-bottom: 7px;
   }
 
-  input[type="number"], input[type="datetime-local"]{
+  input[type="number"], input[type="datetime-local"], input[type="date"]{
     width: 100%;
     font-family:'IBM Plex Mono', monospace;
     font-size: 15px;
@@ -198,6 +199,9 @@
   button.btn-stop{ background: var(--rust); color: var(--paper); }
   button.btn-stop:hover{ background:#a63d28; }
 
+  button.btn-add{ background: var(--amber); color: var(--ink); }
+  button.btn-add:hover{ background:#c97a1f; }
+
   button.btn-reset-mode{ background: var(--rust); color: var(--paper); }
   button.btn-reset-mode:hover{ background:#a63d28; }
 
@@ -238,6 +242,10 @@
   .modal-cancel:hover{ background:none; color: var(--ink); }
 
   .modal-box label{ text-align:left; }
+  .modal-box input[type="date"],
+  .modal-box input[type="number"]{
+    margin-bottom: 16px;
+  }
   .modal-box textarea{
     width:100%;
     font-family:'Work Sans', sans-serif;
@@ -255,6 +263,17 @@
   }
   .modal-box textarea:focus{ border-color: var(--brass); box-shadow: 0 0 0 3px rgba(198,154,43,0.22); }
 
+  .duplicate-notice{
+    background: rgba(92,138,141,0.12);
+    border: 1.5px dashed var(--manual);
+    border-radius: 9px;
+    padding: 12px 14px;
+    margin: -6px 0 18px;
+  }
+  .duplicate-notice p{
+    font-size: 12.5px; color: var(--ink); line-height:1.5; margin: 0 0 10px;
+  }
+
   /* --- Overview link / navigation --- */
   .overview-link-row{ text-align:center; margin-top: 16px; }
   .overview-link{
@@ -268,11 +287,12 @@
   /* --- Overview screen --- */
   #overviewView{ display:none; }
   .overview-topbar{
-    display:flex; align-items:center; justify-content:space-between;
+    display:flex; align-items:center; justify-content:space-between; gap: 10px;
     margin-bottom: 18px;
   }
   .overview-topbar button{
     width:auto; padding: 10px 16px; font-size: 12.5px;
+    flex-shrink:0;
   }
 
   .selection-summary{
@@ -315,7 +335,14 @@
     user-select: none;
   }
   .week-card:active{ transform: scale(0.98); }
+  .week-card.manual-only{ border-color: var(--manual); }
   .week-card.selected{ border-color: var(--brass); box-shadow: 0 0 0 3px rgba(198,154,43,0.25); }
+  .manual-badge{
+    display:inline-block; margin-left:7px; padding:2px 7px; border-radius:5px;
+    background: rgba(92,138,141,0.18); color: var(--manual);
+    font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:0.06em;
+    text-transform:uppercase; vertical-align:middle;
+  }
   .week-card .week-main{ font-family:'Oswald', sans-serif; font-weight:600; font-size: 15px; }
   .week-card .week-range{ font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; font-family:'IBM Plex Mono', monospace; }
   .week-card .week-stats{ text-align:right; font-family:'IBM Plex Mono', monospace; }
@@ -665,7 +692,7 @@
   <div class="card">
     <div class="overview-topbar">
       <button id="mainPageBtn">← Main page</button>
-      <span style="width:1px"></span>
+      <button id="addWeekBtn" class="btn-add">+ Add week</button>
     </div>
 
     <div class="selection-summary" id="selectionSummary">
@@ -691,6 +718,31 @@
     </div>
     <div class="sheet-total" id="sheetTotal"></div>
     <div class="sheet-days" id="sheetDays"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addWeekModal">
+  <div class="modal-box">
+    <h3>Add a week's earnings</h3>
+    <p>For a week you didn't track day-by-day — this adds one total for the whole week, with no daily breakdown.</p>
+    <label for="addWeekDate">Any date within that week</label>
+    <input type="date" id="addWeekDate">
+    <label for="addWeekAmount">Amount earned</label>
+    <input type="number" id="addWeekAmount" min="0" step="0.01" placeholder="e.g. 4200">
+    <label for="addWeekHours">Hours worked (optional)</label>
+    <input type="number" id="addWeekHours" min="0" step="0.25" placeholder="e.g. 37.5">
+    <label for="addWeekComment">Comment (optional)</label>
+    <textarea id="addWeekComment" placeholder="e.g. estimated from payslip"></textarea>
+
+    <div class="duplicate-notice" id="duplicateNotice" style="display:none;">
+      <p id="duplicateNoticeText"></p>
+      <button id="editExistingBtn" class="btn-add">Edit existing entry instead</button>
+    </div>
+
+    <div class="modal-actions">
+      <button id="addWeekSaveBtn" class="btn-add">Add</button>
+      <button id="addWeekCancelBtn" class="modal-cancel">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -739,6 +791,20 @@
   }
   function persistSessions(){
     try{ localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions)); }catch(e){ /* ignore */ }
+  }
+
+  // --- Manual week entries (a single total for a week with no day-by-day tracking) ---
+  const MANUAL_STORAGE_KEY = 'wage-counter-manual-weeks-v1';
+  let manualEntries = [];
+
+  function loadManualEntries(){
+    try{
+      const raw = localStorage.getItem(MANUAL_STORAGE_KEY);
+      manualEntries = raw ? (JSON.parse(raw) || []) : [];
+    }catch(e){ manualEntries = []; }
+  }
+  function persistManualEntries(){
+    try{ localStorage.setItem(MANUAL_STORAGE_KEY, JSON.stringify(manualEntries)); }catch(e){ /* ignore */ }
   }
 
   // ISO 8601 week number + week-year for a given date
@@ -1011,38 +1077,67 @@
     return groups;
   }
 
+  function getAllWeekKeys(){
+    const keys = new Set();
+    sessions.forEach(s => keys.add(s.weekKey));
+    manualEntries.forEach(m => keys.add(m.weekKey));
+    return Array.from(keys);
+  }
+
+  function getWeekAggregate(weekKey){
+    const weekSessions = sessions.filter(s => s.weekKey === weekKey);
+    const weekManuals = manualEntries.filter(m => m.weekKey === weekKey);
+    const amount = weekSessions.reduce((sum,s) => sum+s.amount, 0) + weekManuals.reduce((sum,m) => sum+m.amount, 0);
+    const hours = weekSessions.reduce((sum,s) => sum+s.hours, 0) + weekManuals.reduce((sum,m) => sum+(m.hours||0), 0);
+    return { weekSessions, weekManuals, amount, hours, count: weekSessions.length + weekManuals.length };
+  }
+
+  // Monday (local, midnight) of the ISO week described by a 'YYYY-Www' key —
+  // works even for weeks that only have a manual entry and no tracked session
+  function weekKeyToMonday(weekKey){
+    const [yearStr, weekStr] = weekKey.split('-W');
+    const year = parseInt(yearStr, 10);
+    const week = parseInt(weekStr, 10);
+    const jan4 = new Date(year, 0, 4);
+    const jan4Day = (jan4.getDay() + 6) % 7; // Mon=0
+    const week1Monday = new Date(jan4);
+    week1Monday.setDate(jan4.getDate() - jan4Day);
+    const monday = new Date(week1Monday);
+    monday.setDate(week1Monday.getDate() + (week - 1) * 7);
+    return monday;
+  }
+
   function renderOverview(){
-    const groups = groupSessionsByWeek();
-    const weekKeys = Object.keys(groups).sort().reverse(); // most recent week first
+    const weekKeys = getAllWeekKeys().sort().reverse(); // most recent week first
 
     weeksList.innerHTML = '';
 
     if(weekKeys.length === 0){
-      weeksList.innerHTML = '<p class="week-empty">No sessions saved yet.<br>Use Stop → Save &amp; stop to log a shift here.</p>';
+      weeksList.innerHTML = '<p class="week-empty">No sessions saved yet.<br>Use Stop → Save &amp; stop to log a shift, or "+ Add week" for a week without daily tracking.</p>';
       updateSelectionSummary();
       return;
     }
 
     weekKeys.forEach(weekKey => {
-      const weekSessions = groups[weekKey];
-      const totalAmount = weekSessions.reduce((sum, s) => sum + s.amount, 0);
-      const totalHours = weekSessions.reduce((sum, s) => sum + s.hours, 0);
-      const firstStart = new Date(weekSessions[0].start);
-      const weekStart = getWeekStart(firstStart);
+      const agg = getWeekAggregate(weekKey);
+      const weekStart = weekKeyToMonday(weekKey);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 6);
-      const info = getISOWeekInfo(firstStart);
+      const [yearStr, weekStr] = weekKey.split('-W');
+      const isManualOnly = agg.weekSessions.length === 0 && agg.weekManuals.length > 0;
 
       const card = document.createElement('button');
-      card.className = 'week-card' + (selectedWeeks.has(weekKey) ? ' selected' : '');
+      card.className = 'week-card'
+        + (isManualOnly ? ' manual-only' : '')
+        + (selectedWeeks.has(weekKey) ? ' selected' : '');
       card.innerHTML = `
         <div>
-          <div class="week-main">Week ${info.week} · ${info.year}</div>
+          <div class="week-main">Week ${parseInt(weekStr,10)} · ${yearStr}${isManualOnly ? '<span class="manual-badge">Manual</span>' : ''}</div>
           <div class="week-range">${fmtShortDate(weekStart)} – ${fmtShortDate(weekEnd)}</div>
         </div>
         <div class="week-stats">
-          <div class="week-amount">${totalAmount.toLocaleString('en-GB', {maximumFractionDigits:0})}</div>
-          <div class="week-hours">${fmtHM(totalHours)} · ${weekSessions.length} shift${weekSessions.length===1?'':'s'}</div>
+          <div class="week-amount">${agg.amount.toLocaleString('en-GB', {maximumFractionDigits:0})}</div>
+          <div class="week-hours">${fmtHM(agg.hours)} · ${agg.count} entr${agg.count===1?'y':'ies'}</div>
         </div>
       `;
       card.addEventListener('click', () => handleWeekClick(weekKey));
@@ -1077,11 +1172,8 @@
       selectionSummary.classList.remove('show');
       return;
     }
-    const groups = groupSessionsByWeek();
     let total = 0;
-    selectedWeeks.forEach(wk => {
-      (groups[wk] || []).forEach(s => { total += s.amount; });
-    });
+    selectedWeeks.forEach(wk => { total += getWeekAggregate(wk).amount; });
     selCount.textContent = selectedWeeks.size;
     selTotal.textContent = total.toLocaleString('en-GB', {maximumFractionDigits:0});
     selectionSummary.classList.add('show');
@@ -1093,25 +1185,27 @@
   });
 
   function openWeekDetail(weekKey){
-    const groups = groupSessionsByWeek();
-    const weekSessions = (groups[weekKey] || []).slice().sort((a,b) => new Date(a.start) - new Date(b.start));
-    if(weekSessions.length === 0) return;
+    const agg = getWeekAggregate(weekKey);
+    if(agg.count === 0) return;
 
-    const firstStart = new Date(weekSessions[0].start);
-    const info = getISOWeekInfo(firstStart);
-    const weekStart = getWeekStart(firstStart);
+    const weekStart = weekKeyToMonday(weekKey);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
+    const [yearStr, weekStr] = weekKey.split('-W');
 
-    sheetTitle.textContent = `Week ${info.week} · ${info.year}`;
+    sheetTitle.textContent = `Week ${parseInt(weekStr,10)} · ${yearStr}`;
     sheetRange.textContent = `${fmtShortDate(weekStart)} – ${fmtShortDate(weekEnd)}`;
-
-    const totalAmount = weekSessions.reduce((sum, s) => sum + s.amount, 0);
-    const totalHours = weekSessions.reduce((sum, s) => sum + s.hours, 0);
-    sheetTotal.innerHTML = `${fmtHM(totalHours)} total · <b>${totalAmount.toLocaleString('en-GB',{maximumFractionDigits:0})}</b> earned`;
+    sheetTotal.innerHTML = `${fmtHM(agg.hours)} total · <b>${agg.amount.toLocaleString('en-GB',{maximumFractionDigits:0})}</b> earned`;
 
     sheetDays.innerHTML = '';
-    weekSessions.forEach(s => {
+
+    const sortedSessions = agg.weekSessions.slice().sort((a,b) => new Date(a.start) - new Date(b.start));
+    const showSectionLabels = sortedSessions.length > 0 && agg.weekManuals.length > 0;
+
+    if(showSectionLabels && sortedSessions.length){
+      sheetDays.insertAdjacentHTML('beforeend', '<div class="section-label" style="margin-top:4px;">Daily sessions</div>');
+    }
+    sortedSessions.forEach(s => {
       const d = new Date(s.start);
       const dow = d.toLocaleDateString('en-GB', {weekday:'long'});
       const dateStr = d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
@@ -1123,6 +1217,23 @@
           <span class="day-stats"><b>${s.amount.toLocaleString('en-GB',{maximumFractionDigits:0})}</b> · ${fmtHM(s.hours)}</span>
         </div>
         ${s.comment ? `<div class="day-comment">"${escapeHtml(s.comment)}"</div>` : ''}
+      `;
+      sheetDays.appendChild(row);
+    });
+
+    if(showSectionLabels && agg.weekManuals.length){
+      sheetDays.insertAdjacentHTML('beforeend', '<div class="section-label" style="margin-top:10px;">Manual entries (week total, no daily breakdown)</div>');
+    }
+    agg.weekManuals.forEach(m => {
+      const row = document.createElement('div');
+      row.className = 'day-row';
+      const hoursPart = m.hours ? ` · ${fmtHM(m.hours)}` : '';
+      row.innerHTML = `
+        <div class="day-row-top">
+          <span class="day-date">Manual entry</span>
+          <span class="day-stats"><b>${m.amount.toLocaleString('en-GB',{maximumFractionDigits:0})}</b>${hoursPart}</span>
+        </div>
+        ${m.comment ? `<div class="day-comment">"${escapeHtml(m.comment)}"</div>` : ''}
       `;
       sheetDays.appendChild(row);
     });
@@ -1144,6 +1255,117 @@
     div.textContent = str;
     return div.innerHTML;
   }
+
+  // --- Add week modal (manual, week-level entry — no daily breakdown) ---
+  const addWeekBtn = document.getElementById('addWeekBtn');
+  const addWeekModal = document.getElementById('addWeekModal');
+  const addWeekDate = document.getElementById('addWeekDate');
+  const addWeekAmount = document.getElementById('addWeekAmount');
+  const addWeekHours = document.getElementById('addWeekHours');
+  const addWeekComment = document.getElementById('addWeekComment');
+  const addWeekSaveBtn = document.getElementById('addWeekSaveBtn');
+  const addWeekCancelBtn = document.getElementById('addWeekCancelBtn');
+  const duplicateNotice = document.getElementById('duplicateNotice');
+  const duplicateNoticeText = document.getElementById('duplicateNoticeText');
+  const editExistingBtn = document.getElementById('editExistingBtn');
+
+  let editingManualId = null;
+
+  // finds a manual entry already saved for the week the chosen date falls in
+  function findManualForChosenDate(){
+    const dateVal = new Date(addWeekDate.value);
+    if(isNaN(dateVal)) return null;
+    const wk = weekKeyFor(dateVal);
+    return manualEntries.find(m => m.weekKey === wk) || null;
+  }
+
+  function showDuplicateNotice(existing){
+    const [y, w] = existing.weekKey.split('-W');
+    const hoursPart = existing.hours ? ` (${fmtHM(existing.hours)})` : '';
+    duplicateNoticeText.textContent =
+      `Week ${parseInt(w,10)} · ${y} already has a manual entry of ${existing.amount.toLocaleString('en-GB',{maximumFractionDigits:0})}${hoursPart}. Add a separate entry anyway, or edit the existing one instead.`;
+    duplicateNotice.style.display = 'block';
+    addWeekSaveBtn.textContent = 'Add as new entry anyway';
+  }
+  function hideDuplicateNotice(){
+    duplicateNotice.style.display = 'none';
+    addWeekSaveBtn.textContent = editingManualId ? 'Save changes' : 'Add';
+  }
+  function checkForDuplicate(){
+    const existing = findManualForChosenDate();
+    if(existing && existing.id !== editingManualId){
+      showDuplicateNotice(existing);
+    } else {
+      hideDuplicateNotice();
+    }
+  }
+
+  function resetAddWeekForm(){
+    editingManualId = null;
+    addWeekAmount.value = '';
+    addWeekHours.value = '';
+    addWeekComment.value = '';
+    hideDuplicateNotice();
+  }
+
+  function closeAddWeekModal(){
+    addWeekModal.classList.remove('show');
+    addWeekDate.value = '';
+    resetAddWeekForm();
+  }
+
+  addWeekBtn.addEventListener('click', () => {
+    resetAddWeekForm();
+    addWeekDate.value = toLocalInputValue(new Date()).slice(0,10);
+    checkForDuplicate();
+    addWeekModal.classList.add('show');
+  });
+
+  addWeekDate.addEventListener('change', checkForDuplicate);
+
+  addWeekCancelBtn.addEventListener('click', closeAddWeekModal);
+
+  editExistingBtn.addEventListener('click', () => {
+    const existing = findManualForChosenDate();
+    if(!existing) return;
+    editingManualId = existing.id;
+    addWeekAmount.value = existing.amount;
+    addWeekHours.value = existing.hours || '';
+    addWeekComment.value = existing.comment || '';
+    hideDuplicateNotice();
+  });
+
+  addWeekSaveBtn.addEventListener('click', () => {
+    const dateVal = new Date(addWeekDate.value);
+    const amount = parseFloat(addWeekAmount.value);
+    const hours = parseFloat(addWeekHours.value);
+    if(isNaN(dateVal) || isNaN(amount) || amount <= 0){
+      addWeekAmount.focus();
+      return;
+    }
+
+    if(editingManualId){
+      const idx = manualEntries.findIndex(m => m.id === editingManualId);
+      if(idx !== -1){
+        manualEntries[idx].amount = amount;
+        manualEntries[idx].hours = isNaN(hours) ? 0 : hours;
+        manualEntries[idx].comment = addWeekComment.value.trim();
+        manualEntries[idx].weekKey = weekKeyFor(dateVal);
+      }
+    } else {
+      manualEntries.push({
+        id: 'manual_' + Date.now() + '_' + Math.random().toString(36).slice(2,8),
+        weekKey: weekKeyFor(dateVal),
+        amount: amount,
+        hours: isNaN(hours) ? 0 : hours,
+        comment: addWeekComment.value.trim(),
+        addedAt: new Date().toISOString()
+      });
+    }
+    persistManualEntries();
+    closeAddWeekModal();
+    renderOverview();
+  });
 
   wageInput.addEventListener('input', () => { saveState(); render(); });
   startInput.addEventListener('input', () => { saveState(); render(); });
@@ -1345,6 +1567,7 @@
   loadSavedTotal();
   renderSavedTotal();
   loadSessions();
+  loadManualEntries();
   render();
   setInterval(render, 1000);
 
