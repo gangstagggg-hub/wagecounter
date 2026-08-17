@@ -322,7 +322,7 @@
     background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
     color: var(--ink);
     border-radius: 12px;
-    padding: 14px 18px;
+    padding: 14px 40px 14px 18px;
     margin-bottom: 10px;
     border: 2px solid transparent;
     cursor: pointer;
@@ -330,6 +330,7 @@
     text-transform: none;
     letter-spacing: normal;
     font-weight: 400;
+    position: relative;
     transition: border-color .12s ease, transform .1s ease;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
@@ -343,6 +344,24 @@
     font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:0.06em;
     text-transform:uppercase; vertical-align:middle;
   }
+
+  .week-card-delete{
+    position:absolute; top:10px; right:10px;
+    width:auto; background:none; border:none; color: var(--ink-soft);
+    font-size: 13px; padding: 5px 8px; cursor:pointer; border-radius:6px;
+    text-transform:none; letter-spacing:normal; font-weight:400;
+  }
+  .week-card-delete:hover{ background: rgba(192,74,50,0.12); color: var(--rust); }
+  .week-card-delete.armed{ background: var(--rust); color: var(--paper); font-weight:600; font-size:10.5px; }
+
+  .day-row-right{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .entry-delete{
+    width:auto; background:none; border:none; color: var(--ink-soft);
+    font-size: 13px; padding: 4px 7px; cursor:pointer; border-radius:6px;
+    flex-shrink:0;
+  }
+  .entry-delete:hover{ background: rgba(192,74,50,0.1); color: var(--rust); }
+  .entry-delete.armed{ background: var(--rust); color: var(--paper); font-weight:600; font-size:10.5px; }
   .week-card .week-main{ font-family:'Oswald', sans-serif; font-weight:600; font-size: 15px; }
   .week-card .week-range{ font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; font-family:'IBM Plex Mono', monospace; }
   .week-card .week-stats{ text-align:right; font-family:'IBM Plex Mono', monospace; }
@@ -1126,10 +1145,12 @@
       const [yearStr, weekStr] = weekKey.split('-W');
       const isManualOnly = agg.weekSessions.length === 0 && agg.weekManuals.length > 0;
 
-      const card = document.createElement('button');
+      const card = document.createElement('div');
       card.className = 'week-card'
         + (isManualOnly ? ' manual-only' : '')
         + (selectedWeeks.has(weekKey) ? ' selected' : '');
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
       card.innerHTML = `
         <div>
           <div class="week-main">Week ${parseInt(weekStr,10)} · ${yearStr}${isManualOnly ? '<span class="manual-badge">Manual</span>' : ''}</div>
@@ -1139,8 +1160,12 @@
           <div class="week-amount">${agg.amount.toLocaleString('en-GB', {maximumFractionDigits:0})}</div>
           <div class="week-hours">${fmtHM(agg.hours)} · ${agg.count} entr${agg.count===1?'y':'ies'}</div>
         </div>
+        <button class="week-card-delete" data-week="${weekKey}" aria-label="Delete this week">🗑</button>
       `;
-      card.addEventListener('click', () => handleWeekClick(weekKey));
+      card.addEventListener('click', (e) => {
+        if(e.target.closest('.week-card-delete')) return;
+        handleWeekClick(weekKey);
+      });
       weeksList.appendChild(card);
     });
 
@@ -1184,9 +1209,13 @@
     renderOverview();
   });
 
+  let currentSheetWeekKey = null;
+
   function openWeekDetail(weekKey){
     const agg = getWeekAggregate(weekKey);
-    if(agg.count === 0) return;
+    if(agg.count === 0){ closeWeekDetail(); return; }
+
+    currentSheetWeekKey = weekKey;
 
     const weekStart = weekKeyToMonday(weekKey);
     const weekEnd = new Date(weekStart);
@@ -1214,7 +1243,10 @@
       row.innerHTML = `
         <div class="day-row-top">
           <span class="day-date">${dow}, ${dateStr}</span>
-          <span class="day-stats"><b>${s.amount.toLocaleString('en-GB',{maximumFractionDigits:0})}</b> · ${fmtHM(s.hours)}</span>
+          <span class="day-row-right">
+            <span class="day-stats"><b>${s.amount.toLocaleString('en-GB',{maximumFractionDigits:0})}</b> · ${fmtHM(s.hours)}</span>
+            <button class="entry-delete" data-type="session" data-id="${s.id}" aria-label="Delete entry">🗑</button>
+          </span>
         </div>
         ${s.comment ? `<div class="day-comment">"${escapeHtml(s.comment)}"</div>` : ''}
       `;
@@ -1231,7 +1263,10 @@
       row.innerHTML = `
         <div class="day-row-top">
           <span class="day-date">Manual entry</span>
-          <span class="day-stats"><b>${m.amount.toLocaleString('en-GB',{maximumFractionDigits:0})}</b>${hoursPart}</span>
+          <span class="day-row-right">
+            <span class="day-stats"><b>${m.amount.toLocaleString('en-GB',{maximumFractionDigits:0})}</b>${hoursPart}</span>
+            <button class="entry-delete" data-type="manual" data-id="${m.id}" aria-label="Delete entry">🗑</button>
+          </span>
         </div>
         ${m.comment ? `<div class="day-comment">"${escapeHtml(m.comment)}"</div>` : ''}
       `;
@@ -1243,6 +1278,7 @@
 
   function closeWeekDetail(){
     sheetOverlay.classList.remove('show');
+    currentSheetWeekKey = null;
   }
 
   sheetCloseBtn.addEventListener('click', closeWeekDetail);
@@ -1254,6 +1290,82 @@
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  // --- Delete individual entries (inside a week's detail sheet) ---
+  // tap-once-to-arm, tap-again-to-confirm — consistent with the app's
+  // existing double-tap pattern, no native browser dialogs
+  const entryDeleteArmed = {};
+  const ARM_TIMEOUT_MS = 2500;
+
+  sheetDays.addEventListener('click', (e) => {
+    const btn = e.target.closest('.entry-delete');
+    if(!btn) return;
+    const id = btn.dataset.id;
+    const type = btn.dataset.type;
+
+    if(entryDeleteArmed[id]){
+      clearTimeout(entryDeleteArmed[id]);
+      delete entryDeleteArmed[id];
+      deleteEntry(type, id);
+    } else {
+      btn.classList.add('armed');
+      btn.textContent = 'Confirm?';
+      entryDeleteArmed[id] = setTimeout(() => {
+        delete entryDeleteArmed[id];
+        btn.classList.remove('armed');
+        btn.textContent = '🗑';
+      }, ARM_TIMEOUT_MS);
+    }
+  });
+
+  function deleteEntry(type, id){
+    if(type === 'session'){
+      sessions = sessions.filter(s => s.id !== id);
+      persistSessions();
+    } else {
+      manualEntries = manualEntries.filter(m => m.id !== id);
+      persistManualEntries();
+    }
+    const weekKey = currentSheetWeekKey;
+    renderOverview();
+    if(weekKey && getWeekAggregate(weekKey).count > 0){
+      openWeekDetail(weekKey);
+    } else {
+      closeWeekDetail();
+    }
+  }
+
+  // --- Delete an entire week directly from the Overview list ---
+  const weekDeleteArmed = {};
+
+  weeksList.addEventListener('click', (e) => {
+    const btn = e.target.closest('.week-card-delete');
+    if(!btn) return;
+    const weekKey = btn.dataset.week;
+
+    if(weekDeleteArmed[weekKey]){
+      clearTimeout(weekDeleteArmed[weekKey]);
+      delete weekDeleteArmed[weekKey];
+      deleteWholeWeek(weekKey);
+    } else {
+      btn.classList.add('armed');
+      btn.textContent = 'Confirm?';
+      weekDeleteArmed[weekKey] = setTimeout(() => {
+        delete weekDeleteArmed[weekKey];
+        btn.classList.remove('armed');
+        btn.textContent = '🗑';
+      }, ARM_TIMEOUT_MS);
+    }
+  });
+
+  function deleteWholeWeek(weekKey){
+    sessions = sessions.filter(s => s.weekKey !== weekKey);
+    manualEntries = manualEntries.filter(m => m.weekKey !== weekKey);
+    persistSessions();
+    persistManualEntries();
+    selectedWeeks.delete(weekKey);
+    renderOverview();
   }
 
   // --- Add week modal (manual, week-level entry — no daily breakdown) ---
