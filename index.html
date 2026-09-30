@@ -29,6 +29,23 @@
     --manual: #5c8a8d;
     --muted: #8b93a1;
     --line: rgba(36,38,31,0.14);
+
+    /* "shell" = the outer page chrome outside the paper card, theme-aware */
+    --shell-bg-1: #232b38;
+    --shell-bg-2: #161b22;
+    --shell-bg-3: #0f1319;
+    --shell-text: #f2eee2;
+    --shell-text-soft: #ddc27a;
+    --shell-muted: #8b93a1;
+  }
+
+  :root[data-theme="light"]{
+    --shell-bg-1: #fdfbf5;
+    --shell-bg-2: #f2ecdc;
+    --shell-bg-3: #e8e0c9;
+    --shell-text: #24261f;
+    --shell-text-soft: #93711c;
+    --shell-muted: #6b7280;
   }
 
   *{ box-sizing: border-box; }
@@ -37,10 +54,11 @@
     margin:0; padding:0;
     min-height:100vh;
     background:
-      radial-gradient(ellipse at 50% -10%, #232b38 0%, var(--bg) 45%, var(--bg-vignette) 100%);
+      radial-gradient(ellipse at 50% -10%, var(--shell-bg-1) 0%, var(--shell-bg-2) 45%, var(--shell-bg-3) 100%);
     font-family: 'Work Sans', sans-serif;
-    color: var(--paper);
+    color: var(--shell-text);
     -webkit-font-smoothing: antialiased;
+    transition: background .2s ease, color .2s ease;
   }
 
   body{
@@ -58,7 +76,7 @@
     letter-spacing: 0.32em;
     text-transform: uppercase;
     font-size: 12.5px;
-    color: var(--brass-soft);
+    color: var(--shell-text-soft);
     text-align:center;
     margin: 0 0 6px;
   }
@@ -70,7 +88,7 @@
     text-align:center;
     letter-spacing: 0.01em;
     margin: 0 0 34px;
-    color: #f2eee2;
+    color: var(--shell-text);
   }
 
   .card{
@@ -210,10 +228,10 @@
     margin-top: 20px;
     font-family:'IBM Plex Mono', monospace;
     font-size: 13px;
-    color: var(--muted);
+    color: var(--shell-muted);
   }
   .total-bar .total-label{ letter-spacing:0.04em; }
-  .total-bar .total-value{ color:#ddc27a; font-weight:600; font-size: 15px; }
+  .total-bar .total-value{ color: var(--shell-text-soft); font-weight:600; font-size: 15px; }
   .total-reset{
     width:auto; padding: 3px 11px; font-size: 10.5px;
     background: transparent; border: 1px solid rgba(139,147,161,0.4); color: var(--muted);
@@ -241,6 +259,35 @@
   }
   .modal-cancel:hover{ background:none; color: var(--ink); }
 
+  /* --- Onboarding tutorial (first launch) --- */
+  .onboard-icon{
+    width: 56px; height:56px; border-radius:50%;
+    background: rgba(198,154,43,0.14);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 26px; margin: 0 auto 16px;
+  }
+  .onboard-box h3{ text-align:center; }
+  .onboard-box p{ text-align:center; }
+  .onboard-dots{
+    display:flex; justify-content:center; gap:7px; margin: 4px 0 20px;
+  }
+  .onboard-dots span{
+    width:7px; height:7px; border-radius:50%;
+    background: rgba(36,38,31,0.22);
+    transition: background .2s ease, transform .2s ease;
+  }
+  .onboard-dots span.active{ background: var(--brass); transform: scale(1.25); }
+  .onboard-actions{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  .onboard-skip{
+    width:auto; background:none; color: var(--ink-soft);
+    text-decoration: underline; font-weight:400; text-transform:none;
+    letter-spacing:0; padding:8px;
+  }
+  .onboard-skip:hover{ background:none; color: var(--ink); }
+  .onboard-next{ width:auto; padding: 11px 26px; }
+
   .modal-box label{ text-align:left; }
   .modal-box input[type="date"],
   .modal-box input[type="number"]{
@@ -263,6 +310,15 @@
   }
   .modal-box textarea:focus{ border-color: var(--brass); box-shadow: 0 0 0 3px rgba(198,154,43,0.22); }
 
+  .extra-toggle{
+    background:none; border: 1.5px dashed rgba(198,154,43,0.5);
+    color: var(--ink-soft); font-family:'Oswald', sans-serif;
+    font-size: 12px; text-transform:uppercase; letter-spacing:0.08em;
+    padding: 10px; border-radius: 8px; margin-bottom: 16px;
+  }
+  .extra-toggle:hover{ background: rgba(198,154,43,0.08); color: var(--ink); }
+  .extra-fields input{ margin-bottom: 16px; }
+
   .duplicate-notice{
     background: rgba(92,138,141,0.12);
     border: 1.5px dashed var(--manual);
@@ -277,12 +333,12 @@
   /* --- Overview link / navigation --- */
   .overview-link-row{ text-align:center; margin-top: 16px; }
   .overview-link{
-    width:auto; background:none; color: var(--brass-soft);
+    width:auto; background:none; color: var(--shell-text-soft);
     text-decoration: underline; text-underline-offset: 3px;
     font-family:'Oswald', sans-serif; font-size: 12.5px;
     letter-spacing: 0.1em; text-transform: uppercase; padding: 8px;
   }
-  .overview-link:hover{ background:none; color: #f2eee2; }
+  .overview-link:hover{ background:none; color: var(--shell-text); }
 
   /* --- Overview screen --- */
   #overviewView{ display:none; }
@@ -429,6 +485,40 @@
     margin-top: 5px; font-size: 12.5px; color: var(--ink-soft);
     font-style: italic; line-height:1.4;
   }
+  .day-row .day-extra{
+    margin-top: 5px; font-size: 12.5px; color: var(--manual); font-weight:600;
+  }
+
+  /* --- Theme menu (3-dot button, top of app) --- */
+  .theme-menu-btn{
+    position: fixed; top: 14px; right: 14px; z-index: 55;
+    width: 38px; height:38px; padding:0;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    color: var(--shell-text, #f2eee2);
+    font-size: 20px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .theme-menu-btn:hover{ background: rgba(255,255,255,0.12); }
+
+  .theme-menu{
+    display:none; position: fixed; top: 58px; right: 14px; z-index: 55;
+    background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+    border-radius: 12px; padding: 8px;
+    box-shadow: 0 16px 36px -12px rgba(0,0,0,0.5);
+    min-width: 190px;
+  }
+  .theme-menu.show{ display:block; }
+  .theme-menu button{
+    width:100%; text-align:left; background:none; color: var(--ink);
+    text-transform:none; letter-spacing:normal; font-weight:500; font-size:13.5px;
+    padding: 10px 12px; border-radius: 7px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .theme-menu button:hover{ background: rgba(36,38,31,0.07); }
+  .theme-menu button.active{ color: var(--ink); font-weight:700; }
+  .theme-menu button.active::after{ content:"✓"; color: var(--brass); font-weight:700; }
 
   .row.btnrow-outer{ margin-bottom: 22px; }
   .row.btnrow-outer .field{ flex: 1 1 160px; }
@@ -545,7 +635,7 @@
     margin-top: 22px;
     font-family:'IBM Plex Mono', monospace;
     font-size: 11px;
-    color: var(--muted);
+    color: var(--shell-muted);
     letter-spacing: 0.04em;
   }
 
@@ -585,6 +675,19 @@
 </style>
 </head>
 <body>
+<button id="themeMenuBtn" class="theme-menu-btn" aria-label="Theme settings">⋮</button>
+<div id="themeMenu" class="theme-menu">
+  <button type="button" data-theme-choice="light">Light</button>
+  <button type="button" data-theme-choice="dark">Dark</button>
+  <button type="button" data-theme-choice="system">Use device setting</button>
+</div>
+
+<div class="modal-overlay" id="onboardModal">
+  <div class="modal-box onboard-box" id="onboardBox">
+    <!-- content filled in by JS -->
+  </div>
+</div>
+
 <div class="wrap">
   <p class="eyebrow">Timesheet</p>
   <h1>Wage Counter</h1>
@@ -771,6 +874,15 @@
     <p>Save this session's earnings to your saved total before stopping?</p>
     <label for="stopComment">Comment (optional)</label>
     <textarea id="stopComment" placeholder="e.g. covered for Alex, extra busy shift…"></textarea>
+
+    <button type="button" id="extraToggleBtn" class="extra-toggle">+ Add extra amount (tips, bonus…)</button>
+    <div id="extraFields" class="extra-fields" style="display:none;">
+      <label for="extraDesc">What is it?</label>
+      <input type="text" id="extraDesc" placeholder="e.g. tips">
+      <label for="extraAmount">Extra amount</label>
+      <input type="number" id="extraAmount" min="0" step="0.01" placeholder="e.g. 150">
+    </div>
+
     <div class="modal-actions">
       <button id="stopSaveBtn">Save &amp; stop</button>
       <button id="stopDiscardBtn" class="btn-stop">Discard &amp; stop</button>
@@ -780,6 +892,31 @@
 </div>
 
 <script>
+  // --- Theme (light / dark / system) — applied immediately, before anything
+  // else, so the page never flashes the wrong theme on load ---
+  const THEME_STORAGE_KEY = 'wage-counter-theme-v1';
+
+  function getSystemTheme(){
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+  }
+  function loadThemeChoice(){
+    try{ return localStorage.getItem(THEME_STORAGE_KEY) || 'system'; }catch(e){ return 'system'; }
+  }
+  function saveThemeChoice(choice){
+    try{ localStorage.setItem(THEME_STORAGE_KEY, choice); }catch(e){ /* ignore */ }
+  }
+  let currentThemeChoice = loadThemeChoice();
+  function applyTheme(choice){
+    const effective = choice === 'system' ? getSystemTheme() : choice;
+    document.documentElement.setAttribute('data-theme', effective);
+  }
+  applyTheme(currentThemeChoice);
+  if(window.matchMedia){
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+      if(currentThemeChoice === 'system') applyTheme('system');
+    });
+  }
+
   // --- Storage (localStorage) ---
   const STORAGE_KEY = 'wage-counter-state-v2';
   const TOTAL_STORAGE_KEY = 'wage-counter-saved-total-v1';
@@ -1004,6 +1141,23 @@
   }
 
   const stopComment = document.getElementById('stopComment');
+  const extraToggleBtn = document.getElementById('extraToggleBtn');
+  const extraFields = document.getElementById('extraFields');
+  const extraDesc = document.getElementById('extraDesc');
+  const extraAmount = document.getElementById('extraAmount');
+
+  extraToggleBtn.addEventListener('click', () => {
+    const showing = extraFields.style.display !== 'none';
+    extraFields.style.display = showing ? 'none' : 'block';
+    extraToggleBtn.textContent = showing ? '+ Add extra amount (tips, bonus…)' : '− Remove extra amount';
+  });
+
+  function resetExtraFields(){
+    extraDesc.value = '';
+    extraAmount.value = '';
+    extraFields.style.display = 'none';
+    extraToggleBtn.textContent = '+ Add extra amount (tips, bonus…)';
+  }
 
   stopBtn.addEventListener('click', () => {
     stopModal.classList.add('show');
@@ -1020,7 +1174,13 @@
     if(!isNaN(start) && wage > 0 && calcEnd > start){
       const settings = getSettings();
       const data = computeAll(start, calcEnd, wage, settings);
-      savedTotal += data.totalKr;
+
+      const extraAmt = parseFloat(extraAmount.value);
+      const hasExtra = !isNaN(extraAmt) && extraAmt > 0;
+      const extraDescVal = extraDesc.value.trim();
+      const totalWithExtra = data.totalKr + (hasExtra ? extraAmt : 0);
+
+      savedTotal += totalWithExtra;
       persistSavedTotal();
       renderSavedTotal();
 
@@ -1029,19 +1189,22 @@
         start: start.toISOString(),
         end: calcEnd.toISOString(),
         hours: data.totalHours,
-        amount: data.totalKr,
+        amount: totalWithExtra,
         comment: stopComment.value.trim(),
-        weekKey: weekKeyFor(start)
+        weekKey: weekKeyFor(start),
+        extra: hasExtra ? { amount: extraAmt, description: extraDescVal } : null
       });
       persistSessions();
     }
     stopComment.value = '';
+    resetExtraFields();
     stopModal.classList.remove('show');
     endCurrentSession();
   });
 
   stopDiscardBtn.addEventListener('click', () => {
     stopComment.value = '';
+    resetExtraFields();
     stopModal.classList.remove('show');
     endCurrentSession();
   });
@@ -1240,6 +1403,9 @@
       const dateStr = d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
       const row = document.createElement('div');
       row.className = 'day-row';
+      const extraLine = s.extra
+        ? `<div class="day-extra">+ ${s.extra.amount.toLocaleString('en-GB',{maximumFractionDigits:0})}${s.extra.description ? ' — ' + escapeHtml(s.extra.description) : ''}</div>`
+        : '';
       row.innerHTML = `
         <div class="day-row-top">
           <span class="day-date">${dow}, ${dateStr}</span>
@@ -1248,6 +1414,7 @@
             <button class="entry-delete" data-type="session" data-id="${s.id}" aria-label="Delete entry">🗑</button>
           </span>
         </div>
+        ${extraLine}
         ${s.comment ? `<div class="day-comment">"${escapeHtml(s.comment)}"</div>` : ''}
       `;
       sheetDays.appendChild(row);
@@ -1682,6 +1849,110 @@
   loadManualEntries();
   render();
   setInterval(render, 1000);
+
+  // --- First-launch onboarding tutorial ---
+  const ONBOARD_STORAGE_KEY = 'wage-counter-onboarded-v1';
+  const onboardModal = document.getElementById('onboardModal');
+  const onboardBox = document.getElementById('onboardBox');
+
+  const onboardSteps = [
+    {
+      icon: '⏱️',
+      title: 'Track pay as you work',
+      text: 'Enter your hourly wage, tap Start now, and your earnings count up live. Tap Pause for a break, or Reset to clear the current session.'
+    },
+    {
+      icon: '¤',
+      title: 'Set your overtime rates',
+      text: 'Fill in Overtime 1 and Overtime 2 to apply higher rates after a set number of hours. Leave them blank if overtime doesn\u2019t apply.'
+    },
+    {
+      icon: '💾',
+      title: 'Save a finished shift',
+      text: 'Tap Stop → Save & stop to log it, with an optional comment. You can also enter a past Start and End time to work out an already-finished shift.'
+    },
+    {
+      icon: '📅',
+      title: 'See your Overview',
+      text: 'The Overview button at the bottom shows weekly totals. Add a week you didn\u2019t track day-by-day, or double-tap weeks to combine their totals.'
+    }
+  ];
+
+  let onboardIndex = 0;
+
+  function renderOnboardStep(){
+    const step = onboardSteps[onboardIndex];
+    const isLast = onboardIndex === onboardSteps.length - 1;
+    const dots = onboardSteps.map((_, i) => `<span class="${i===onboardIndex ? 'active' : ''}"></span>`).join('');
+
+    onboardBox.innerHTML = `
+      <div class="onboard-icon">${step.icon}</div>
+      <h3>${step.title}</h3>
+      <p>${step.text}</p>
+      <div class="onboard-dots">${dots}</div>
+      <div class="onboard-actions">
+        <button class="onboard-skip" id="onboardSkipBtn">Skip</button>
+        <button class="onboard-next" id="onboardNextBtn">${isLast ? 'Get started' : 'Next'}</button>
+      </div>
+    `;
+
+    document.getElementById('onboardSkipBtn').addEventListener('click', closeOnboarding);
+    document.getElementById('onboardNextBtn').addEventListener('click', () => {
+      if(isLast){
+        closeOnboarding();
+      } else {
+        onboardIndex++;
+        renderOnboardStep();
+      }
+    });
+  }
+
+  function closeOnboarding(){
+    onboardModal.classList.remove('show');
+    try{ localStorage.setItem(ONBOARD_STORAGE_KEY, '1'); }catch(e){ /* ignore */ }
+  }
+
+  (function maybeShowOnboarding(){
+    let seen = false;
+    try{ seen = localStorage.getItem(ONBOARD_STORAGE_KEY) === '1'; }catch(e){ /* ignore */ }
+    if(!seen){
+      onboardIndex = 0;
+      renderOnboardStep();
+      onboardModal.classList.add('show');
+    }
+  })();
+
+  // --- Theme menu wiring (3-dot button) ---
+  const themeMenuBtn = document.getElementById('themeMenuBtn');
+  const themeMenu = document.getElementById('themeMenu');
+
+  function renderThemeMenu(){
+    themeMenu.querySelectorAll('[data-theme-choice]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.themeChoice === currentThemeChoice);
+    });
+  }
+
+  themeMenuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willShow = !themeMenu.classList.contains('show');
+    if(willShow) renderThemeMenu();
+    themeMenu.classList.toggle('show', willShow);
+  });
+
+  themeMenu.querySelectorAll('[data-theme-choice]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentThemeChoice = btn.dataset.themeChoice;
+      saveThemeChoice(currentThemeChoice);
+      applyTheme(currentThemeChoice);
+      themeMenu.classList.remove('show');
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if(themeMenu.classList.contains('show') && !themeMenu.contains(e.target) && e.target !== themeMenuBtn){
+      themeMenu.classList.remove('show');
+    }
+  });
 
   // register service worker for offline use / installation
   if('serviceWorker' in navigator){
