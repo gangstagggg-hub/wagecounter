@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appName">Wage Counter</string>
+    <string name="launchUrl">https://gangstagggg-hub.github.io/wagecounter/</string>
+    <string name="hostName">gangstagggg-hub.github.io</string>
+</resources>
