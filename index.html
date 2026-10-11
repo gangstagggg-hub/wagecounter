@@ -711,6 +711,11 @@
     border-radius:7px; border:1.5px solid rgba(36,38,31,0.22); background:#fbf9f3; color:var(--ink); outline:none;
   }
   select#periodType:focus{ border-color: var(--brass); box-shadow: 0 0 0 3px rgba(198,154,43,0.22); }
+
+  .selection-summary{ flex-wrap: wrap; }
+  .sel-actions .btn-add{ white-space: nowrap; }
+  :root[data-theme="light"] .selection-summary{ color: var(--ink); }
+  :root[data-theme="light"] .selection-summary .sel-value{ color: #8a5a1a; }
 </style>
 </head>
 <body>
@@ -2224,8 +2229,10 @@
 
     const data = computeAll(start, now, wage, settings);
 
-    const wholeKr = Math.floor(data.totalKr);
-    const oere = Math.round((data.totalKr - wholeKr)*100);
+    // work in whole cents so e.g. 2855.9999 shows as 2,856.00 (not 2,855.100)
+    const totalCents = Math.round(data.totalKr * 100);
+    const wholeKr = Math.floor(totalCents / 100);
+    const oere = totalCents % 100;
     document.getElementById('krWhole').textContent = wholeKr.toLocaleString('en-GB');
     document.getElementById('krOere').textContent = String(oere).padStart(2,'0');
 
