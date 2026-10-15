@@ -716,6 +716,49 @@
   .sel-actions .btn-add{ white-space: nowrap; }
   :root[data-theme="light"] .selection-summary{ color: var(--ink); }
   :root[data-theme="light"] .selection-summary .sel-value{ color: #8a5a1a; }
+
+  .break-info{
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; color: var(--ink-soft);
+    margin: -8px 0 16px; min-height: 1em;
+  }
+  .break-info.err{ color: var(--rust); }
+
+  /* --- Costs overview --- */
+  #costsView{ display:none; }
+  .cost-summary{ text-align:center; margin: 4px 0 14px; }
+  .cost-summary .big{ font-family:'Oswald',sans-serif; font-size:30px; color: var(--ink); }
+  .cost-summary .sub{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; color: var(--ink-soft); margin-top:4px; }
+  .cost-card{
+    border-radius:12px; padding: 12px 14px; margin-bottom: 10px;
+    border:2px solid var(--rust); background: rgba(192,74,50,0.10); color: var(--ink);
+  }
+  .cost-card.green{ border-color:#3f8f4f; background: rgba(63,143,79,0.14); }
+  .cost-card .cost-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .cost-card .cost-name{ font-family:'Oswald',sans-serif; letter-spacing:0.05em; text-transform:uppercase; font-size:14px; }
+  .cost-card .cost-amt{ font-family:'IBM Plex Mono',monospace; font-weight:600; }
+  .cost-card .cost-state{ font-family:'IBM Plex Mono',monospace; font-size:12px; color: var(--ink-soft); margin-top:4px; }
+  .cost-card:not(.green) .cost-state{ color: var(--rust); }
+  .fixed-list{ margin-top:8px; border-top:1px dashed rgba(128,128,128,0.4); padding-top:6px; }
+  .fixed-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:5px 0; font-size:14px; }
+  .fixed-row .fr-main{ flex:1; background:none; color:inherit; text-align:left; text-transform:none; letter-spacing:normal; font-weight:400; padding:4px 0; display:flex; justify-content:space-between; gap:10px; }
+  .fixed-row .fr-main:hover{ background:none; }
+  .cost-del{ width:auto; background:none; color: var(--ink-soft); padding:4px 8px; font-size:13px; text-transform:none; letter-spacing:normal; }
+  .cost-del:hover{ background:none; color: var(--rust); }
+  .cost-del.armed{ color:#fff; background: var(--rust); border-radius:8px; }
+  .cost-item{ display:flex; align-items:center; gap:8px; touch-action:pan-y; }
+  .cost-item .drag-handle{
+    width:auto; background:none; color: var(--ink-soft); padding:6px 8px; font-size:20px; line-height:1;
+    cursor:grab; touch-action:none; text-transform:none; letter-spacing:normal; user-select:none;
+  }
+  .cost-item .drag-handle:hover{ background:none; }
+  .cost-item .ci-main{ flex:1; min-width:0; background:none; color:inherit; text-align:left; text-transform:none; letter-spacing:normal; font-weight:400; padding:0; }
+  .cost-item .ci-main:hover{ background:none; }
+  .cost-item .cost-head{ gap:8px; }
+  .cost-item.dragging{ opacity:0.85; box-shadow:0 8px 20px rgba(0,0,0,0.35); position:relative; z-index:5; }
+  .cost-hint{ font-size:12px; color: var(--ink-soft); text-align:center; margin: 6px 0 12px; }
+  .cost-add-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .cost-add-row button{ flex:1; }
+  .cost-empty{ text-align:center; color: var(--ink-soft); font-size:13px; padding:10px 0; }
 </style>
 </head>
 <body>
@@ -724,6 +767,7 @@
   <button type="button" data-theme-choice="light">Light</button>
   <button type="button" data-theme-choice="dark">Dark</button>
   <button type="button" data-theme-choice="system">Use device setting</button>
+  <button type="button" id="costsToggleBtn">Costs overview: Off</button>
 </div>
 
 <div class="modal-overlay" id="onboardModal">
@@ -901,6 +945,57 @@
 
   <div class="overview-link-row">
     <button class="overview-link" id="overviewBtn">Overview</button>
+    <button class="overview-link" id="costsBtn" style="display:none;">Costs</button>
+  </div>
+</div>
+
+<div class="wrap" id="costsView">
+  <p class="eyebrow">Budget</p>
+  <h1>Costs</h1>
+  <div class="card">
+    <div class="overview-topbar">
+      <button id="costsMainBtn">← Main page</button>
+      <button id="costsOffBtn" class="btn-add">Turn off</button>
+    </div>
+    <div class="cost-summary">
+      <div class="big" id="costPayout">0</div>
+      <div class="sub" id="costPayoutSub"></div>
+      <div class="sub" id="costLeft"></div>
+    </div>
+
+    <div class="cost-card" id="fixedCard">
+      <div class="cost-head">
+        <span class="cost-name">Fixed costs</span>
+        <span class="cost-amt" id="fixedTotal">0</span>
+      </div>
+      <div class="cost-state" id="fixedState"></div>
+      <div class="fixed-list" id="fixedList"></div>
+    </div>
+    <div class="cost-add-row">
+      <button type="button" id="addFixedBtn" class="btn-add">+ Add fixed cost</button>
+    </div>
+
+    <p class="section-label">Other things</p>
+    <div id="costItems"></div>
+    <div class="cost-hint" id="costHint">Drag ☰ to reorder — the top one turns green first.</div>
+    <div class="cost-add-row">
+      <button type="button" id="addItemBtn" class="btn-add">+ Add item</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="costModal">
+  <div class="modal-box">
+    <h3 id="costModalTitle">Add cost</h3>
+    <label for="costName">Name</label>
+    <input type="text" id="costName" placeholder="e.g. Concert tickets">
+    <label for="costAmount">Cost</label>
+    <input type="number" id="costAmount" min="0" step="0.01" placeholder="e.g. 1200">
+    <div class="break-info err" id="costErr"></div>
+    <div class="modal-actions">
+      <button id="costSaveBtn">Save</button>
+      <button id="costCancelBtn" class="modal-cancel">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -995,6 +1090,10 @@
     <label for="stopComment">Comment (optional)</label>
     <textarea id="stopComment" placeholder="e.g. covered for Alex, extra busy shift…"></textarea>
 
+    <label for="stopBreak">Unpaid break (minutes, optional)</label>
+    <input type="number" id="stopBreak" min="0" step="1" placeholder="e.g. 30" value="">
+    <div class="break-info" id="stopBreakInfo"></div>
+
     <button type="button" id="extraToggleBtn" class="extra-toggle">+ Add extra amount (tips, bonus…)</button>
     <div id="extraFields" class="extra-fields" style="display:none;">
       <label for="extraDesc">What is it?</label>
@@ -1052,6 +1151,7 @@
     try{ localStorage.setItem(TOTAL_STORAGE_KEY, String(savedTotal)); }catch(e){ /* ignore */ }
   }
   function renderSavedTotal(){
+    try{ if(costsView.style.display === 'block') renderCosts(); }catch(e){ /* not ready yet */ }
     document.getElementById('totalValue').textContent = savedTotal.toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
     const net = document.getElementById('totalNet');
     const pct = getTaxPct();
@@ -1361,7 +1461,37 @@
     extraToggleBtn.textContent = showing ? '+ Add extra amount (tips, bonus…)' : '− Remove extra amount';
   });
 
+  const stopBreak = document.getElementById('stopBreak');
+  const stopBreakInfo = document.getElementById('stopBreakInfo');
+
+  // unpaid break in minutes (0 when blank/invalid)
+  function getBreakMin(){
+    const b = parseFloat(stopBreak.value);
+    return (isNaN(b) || b < 0) ? 0 : b;
+  }
+
+  // live preview in the save dialog: worked time and amount after the unpaid break
+  function updateBreakPreview(){
+    stopBreakInfo.classList.remove('err');
+    const brk = getBreakMin();
+    const wage = parseFloat(wageInput.value);
+    const rng = getRange();
+    if(brk <= 0 || isNaN(rng.start) || !(wage > 0)){ stopBreakInfo.textContent = ''; return; }
+    const effEnd = new Date(rng.end.getTime() - brk * 60000);
+    if(effEnd <= rng.start){
+      stopBreakInfo.textContent = 'The break is longer than the shift.';
+      stopBreakInfo.classList.add('err');
+      return;
+    }
+    const d = computeAll(rng.start, effEnd, wage, getSettings());
+    stopBreakInfo.textContent = `After break: ${fmtHM(d.totalHours)} · ${fmtKr(d.totalKr)}`;
+  }
+  stopBreak.addEventListener('input', updateBreakPreview);
+
   function resetExtraFields(){
+    stopBreak.value = '';
+    stopBreakInfo.textContent = '';
+    stopBreakInfo.classList.remove('err');
     extraDesc.value = '';
     extraAmount.value = '';
     extraFields.style.display = 'none';
@@ -1379,6 +1509,7 @@
       : 'Save this session\u2019s earnings to your saved total before stopping?';
     stopSaveBtn.innerHTML = hm ? 'Save shift' : 'Save &amp; stop';
     stopDiscardBtn.style.display = hm ? 'none' : '';
+    updateBreakPreview();
     stopModal.classList.add('show');
   }
 
@@ -1404,9 +1535,17 @@
     const rng = getRange();
     const start = rng.start;
     const calcEnd = rng.end;
-    if(!isNaN(start) && wage > 0 && calcEnd > start){
+    const breakMin = getBreakMin();
+    // an unpaid break is taken off the worked time, so overtime thresholds count worked hours only
+    const effEnd = new Date(calcEnd.getTime() - breakMin * 60000);
+    if(breakMin > 0 && !isNaN(start) && effEnd <= start){
+      updateBreakPreview();
+      stopBreak.focus();
+      return;
+    }
+    if(!isNaN(start) && wage > 0 && effEnd > start){
       const settings = getSettings();
-      const data = computeAll(start, calcEnd, wage, settings);
+      const data = computeAll(start, effEnd, wage, settings);
 
       const extraAmt = parseFloat(extraAmount.value);
       const hasExtra = !isNaN(extraAmt) && extraAmt > 0;
@@ -1421,6 +1560,7 @@
         id: 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2,8),
         start: start.toISOString(),
         end: calcEnd.toISOString(),
+        breakMin: breakMin > 0 ? breakMin : 0,
         hours: data.totalHours,
         amount: totalWithExtra,
         comment: stopComment.value.trim(),
@@ -1446,11 +1586,14 @@
     savedTotal = 0;
     persistSavedTotal();
     renderSavedTotal();
+    // sessions saved so far are no longer part of the total
+    sessions.forEach(s => { s.counted = false; });
+    persistSessions();
   });
 
   // --- Overview page: navigation, weekly summary cards, day-detail sheet,
   //     and double-tap multi-week selection for a combined total ---
-  const mainView = document.querySelector('body > div.wrap:not(#overviewView)');
+  const mainView = document.querySelector('body > div.wrap:not(#overviewView):not(#costsView)');
   const overviewView = document.getElementById('overviewView');
   const overviewBtn = document.getElementById('overviewBtn');
   const mainPageBtn = document.getElementById('mainPageBtn');
@@ -1472,11 +1615,13 @@
 
   function showOverview(){
     mainView.style.display = 'none';
+    document.getElementById('costsView').style.display = 'none';
     overviewView.style.display = 'block';
     renderOverview();
   }
   function showMain(){
     overviewView.style.display = 'none';
+    document.getElementById('costsView').style.display = 'none';
     mainView.style.display = '';
   }
 
@@ -1779,9 +1924,10 @@
       const dateStr = d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
       const row = document.createElement('div');
       row.className = 'day-row';
-      const extraLine = s.extra
+      const extraLine = (s.extra
         ? `<div class="day-extra">+ ${s.extra.amount.toLocaleString('en-GB',{maximumFractionDigits:0})}${s.extra.description ? ' — ' + escapeHtml(s.extra.description) : ''}</div>`
-        : '';
+        : '')
+        + (s.breakMin ? `<div class="day-extra">Unpaid break: ${s.breakMin} min</div>` : '');
       row.innerHTML = `
         <div class="day-row-top">
           <span class="day-date">${dow}, ${dateStr}</span>
@@ -1862,8 +2008,21 @@
     }
   });
 
+  // take a deleted session's amount back out of the Saved total on the main page.
+  // Sessions saved before the last "Reset" are no longer in the total (counted === false).
+  function removeFromSavedTotal(list){
+    let sub = 0;
+    list.forEach(s => { if(s.counted !== false) sub += s.amount; });
+    if(sub > 0){
+      savedTotal = Math.max(0, savedTotal - sub);
+      persistSavedTotal();
+      renderSavedTotal();
+    }
+  }
+
   function deleteEntry(type, id){
     if(type === 'session'){
+      removeFromSavedTotal(sessions.filter(s => s.id === id));
       sessions = sessions.filter(s => s.id !== id);
       persistSessions();
     } else {
@@ -1903,6 +2062,7 @@
   });
 
   function deleteWholeWeek(weekKey){
+    removeFromSavedTotal(sessions.filter(s => s.weekKey === weekKey));
     sessions = sessions.filter(s => s.weekKey !== weekKey);
     manualEntries = manualEntries.filter(m => m.weekKey !== weekKey);
     persistSessions();
@@ -2385,6 +2545,226 @@
       themeMenu.classList.remove('show');
     }
   });
+
+  // --- Costs overview ---
+  const COSTS_KEY = 'wage-counter-costs-v1';
+  const costsView = document.getElementById('costsView');
+  const costsBtn = document.getElementById('costsBtn');
+  const costsToggleBtn = document.getElementById('costsToggleBtn');
+  let costs = { enabled:false, fixed:[], items:[] };
+  try{
+    const c = JSON.parse(localStorage.getItem(COSTS_KEY) || 'null');
+    if(c && typeof c === 'object'){
+      costs.enabled = !!c.enabled;
+      costs.fixed = Array.isArray(c.fixed) ? c.fixed.filter(x => x && x.amount > 0) : [];
+      costs.items = Array.isArray(c.items) ? c.items.filter(x => x && x.amount > 0) : [];
+    }
+  }catch(e){}
+  function persistCosts(){ try{ localStorage.setItem(COSTS_KEY, JSON.stringify(costs)); }catch(e){} }
+  function newCostId(){ return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+  function money2(cents){
+    return (cents/100).toLocaleString('en-GB', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  function toCents(v){ return Math.round(v * 100); }
+
+  function computeCosts(){
+    const pct = getTaxPct();
+    const payoutC = Math.round(savedTotal * (1 - pct/100) * 100);
+    const fixedC = costs.fixed.reduce((a,x) => a + toCents(x.amount), 0);
+    const fixedGreen = payoutC >= fixedC;
+    let left = fixedGreen ? payoutC - fixedC : 0;
+    let blocked = !fixedGreen;
+    const itemStates = costs.items.map(it => {
+      const c = toCents(it.amount);
+      if(!blocked && left >= c){ left -= c; return { green:true, toGo:0 }; }
+      const st = { green:false, toGo: blocked ? null : c - left };
+      if(!blocked){ st.toGo = c - left; }
+      blocked = true;
+      return st;
+    });
+    return { pct, payoutC, fixedC, fixedGreen, fixedToGo: Math.max(0, fixedC - payoutC), leftC: left, itemStates };
+  }
+
+  function renderCosts(){
+    const r = computeCosts();
+    document.getElementById('costPayout').textContent = money2(r.payoutC);
+    document.getElementById('costPayoutSub').textContent = r.pct > 0
+      ? 'payout after ' + r.pct + '% tax'
+      : 'No tax rate set — full amount counts as payout';
+    const leftEl = document.getElementById('costLeft');
+    const allGreen = r.fixedGreen && r.itemStates.every(x => x.green);
+    leftEl.textContent = allGreen ? ('left over: ' + money2(r.leftC)) : '';
+
+    const fixedCard = document.getElementById('fixedCard');
+    fixedCard.classList.toggle('green', r.fixedGreen);
+    document.getElementById('fixedTotal').textContent = money2(r.fixedC);
+    document.getElementById('fixedState').textContent = r.fixedC === 0
+      ? 'No fixed costs added yet'
+      : (r.fixedGreen ? 'Covered ✓' : money2(r.fixedToGo) + ' to go');
+
+    const fl = document.getElementById('fixedList');
+    fl.innerHTML = costs.fixed.map(x =>
+      '<div class="fixed-row" data-id="' + x.id + '">' +
+      '<button type="button" class="fr-main" data-edit="fixed"><span>' + escapeHtml(x.name) + '</span><span>' + money2(toCents(x.amount)) + '</span></button>' +
+      '<button type="button" class="cost-del" data-del="fixed" aria-label="Delete">✕</button></div>'
+    ).join('');
+
+    const box = document.getElementById('costItems');
+    if(!costs.items.length){
+      box.innerHTML = '<div class="cost-empty">Nothing added yet. Add tickets, a trip, anything with a price.</div>';
+    }else{
+      let firstRedShown = false;
+      box.innerHTML = costs.items.map((it, i) => {
+        const st = r.itemStates[i];
+        let state;
+        if(st.green) state = 'Covered ✓';
+        else if(!firstRedShown && st.toGo != null){ state = money2(st.toGo) + ' to go'; firstRedShown = true; }
+        else { state = 'Not covered yet'; firstRedShown = true; }
+        return '<div class="cost-card cost-item' + (st.green ? ' green' : '') + '" data-id="' + it.id + '">' +
+          '<button type="button" class="drag-handle" aria-label="Drag to reorder">☰</button>' +
+          '<button type="button" class="ci-main" data-edit="item"><div class="cost-head"><span class="cost-name">' + escapeHtml(it.name) + '</span><span class="cost-amt">' + money2(toCents(it.amount)) + '</span></div>' +
+          '<div class="cost-state">' + state + '</div></button>' +
+          '<button type="button" class="cost-del" data-del="item" aria-label="Delete">✕</button></div>';
+      }).join('');
+    }
+    document.getElementById('costHint').style.display = costs.items.length > 1 ? '' : 'none';
+  }
+
+  function applyCostsEnabled(){
+    costsBtn.style.display = costs.enabled ? '' : 'none';
+    costsToggleBtn.textContent = 'Costs overview: ' + (costs.enabled ? 'On' : 'Off');
+  }
+  function showCosts(){
+    mainView.style.display = 'none';
+    overviewView.style.display = 'none';
+    costsView.style.display = 'block';
+    renderCosts();
+    window.scrollTo(0,0);
+  }
+  costsToggleBtn.addEventListener('click', () => {
+    themeMenu.classList.remove('show');
+    costs.enabled = !costs.enabled;
+    persistCosts();
+    applyCostsEnabled();
+    if(costs.enabled) showCosts(); else showMain();
+  });
+  costsBtn.addEventListener('click', showCosts);
+  document.getElementById('costsMainBtn').addEventListener('click', showMain);
+  document.getElementById('costsOffBtn').addEventListener('click', () => {
+    costs.enabled = false; persistCosts(); applyCostsEnabled(); showMain();
+  });
+  applyCostsEnabled();
+
+  // add / edit modal
+  const costModal = document.getElementById('costModal');
+  const costName = document.getElementById('costName');
+  const costAmount = document.getElementById('costAmount');
+  const costErr = document.getElementById('costErr');
+  let costEditing = null; // {kind, id|null}
+  function openCostModal(kind, id){
+    costEditing = { kind, id: id || null };
+    const list = kind === 'fixed' ? costs.fixed : costs.items;
+    const ex = id ? list.find(x => x.id === id) : null;
+    document.getElementById('costModalTitle').textContent =
+      (ex ? 'Edit ' : 'Add ') + (kind === 'fixed' ? 'fixed cost' : 'item');
+    costName.value = ex ? ex.name : '';
+    costAmount.value = ex ? ex.amount : '';
+    costErr.textContent = '';
+    costModal.classList.add('show');
+    setTimeout(() => costName.focus(), 50);
+  }
+  function closeCostModal(){ costModal.classList.remove('show'); costEditing = null; }
+  document.getElementById('addFixedBtn').addEventListener('click', () => openCostModal('fixed'));
+  document.getElementById('addItemBtn').addEventListener('click', () => openCostModal('item'));
+  document.getElementById('costCancelBtn').addEventListener('click', closeCostModal);
+  document.getElementById('costSaveBtn').addEventListener('click', () => {
+    const name = costName.value.trim();
+    const amt = parseFloat(costAmount.value);
+    if(!name){ costErr.textContent = 'Enter a name.'; return; }
+    if(isNaN(amt) || amt <= 0){ costErr.textContent = 'Enter a cost above 0.'; return; }
+    const list = costEditing.kind === 'fixed' ? costs.fixed : costs.items;
+    if(costEditing.id){
+      const ex = list.find(x => x.id === costEditing.id);
+      if(ex){ ex.name = name; ex.amount = amt; }
+    }else{
+      list.push({ id:newCostId(), name, amount:amt });
+    }
+    persistCosts(); closeCostModal(); renderCosts();
+  });
+
+  // edit + arm-then-confirm delete
+  const costArmed = {};
+  costsView.addEventListener('click', (e) => {
+    const row = e.target.closest('[data-id]');
+    if(!row) return;
+    const id = row.dataset.id;
+    const ed = e.target.closest('[data-edit]');
+    if(ed){ openCostModal(ed.dataset.edit, id); return; }
+    const del = e.target.closest('[data-del]');
+    if(del){
+      if(costArmed[id]){
+        clearTimeout(costArmed[id]); delete costArmed[id];
+        const k = del.dataset.del;
+        if(k === 'fixed') costs.fixed = costs.fixed.filter(x => x.id !== id);
+        else costs.items = costs.items.filter(x => x.id !== id);
+        persistCosts(); renderCosts();
+      }else{
+        del.classList.add('armed'); del.textContent = 'Confirm?';
+        costArmed[id] = setTimeout(() => {
+          delete costArmed[id];
+          del.classList.remove('armed'); del.textContent = '✕';
+        }, ARM_TIMEOUT_MS);
+      }
+    }
+  });
+
+  // drag to reorder (pointer events, works for touch + mouse)
+  (function(){
+    const box = document.getElementById('costItems');
+    let drag = null;
+    box.addEventListener('pointerdown', (e) => {
+      const h = e.target.closest('.drag-handle');
+      if(!h) return;
+      const card = h.closest('.cost-item');
+      e.preventDefault();
+      h.setPointerCapture(e.pointerId);
+      drag = { card, handle:h, pid:e.pointerId, startY:e.clientY };
+      card.classList.add('dragging');
+    });
+    box.addEventListener('pointermove', (e) => {
+      if(!drag || e.pointerId !== drag.pid) return;
+      const card = drag.card;
+      card.style.transform = 'translateY(' + (e.clientY - drag.startY) + 'px)';
+      const sibs = [...box.querySelectorAll('.cost-item')].filter(x => x !== card);
+      const rect = card.getBoundingClientRect();
+      const mid = rect.top + rect.height/2;
+      let before = null;
+      for(const sb of sibs){
+        const r = sb.getBoundingClientRect();
+        if(mid < r.top + r.height/2){ before = sb; break; }
+      }
+      if(card.nextElementSibling !== before){
+        const visualTop = rect.top;
+        card.style.transform = '';
+        box.insertBefore(card, before);
+        const natTop = card.getBoundingClientRect().top;
+        const tr = visualTop - natTop;
+        drag.startY = e.clientY - tr;
+        card.style.transform = 'translateY(' + tr + 'px)';
+      }
+    });
+    function end(e){
+      if(!drag || e.pointerId !== drag.pid) return;
+      const card = drag.card;
+      card.classList.remove('dragging'); card.style.transform = '';
+      drag = null;
+      const order = [...box.querySelectorAll('.cost-item')].map(x => x.dataset.id);
+      costs.items.sort((a,b) => order.indexOf(a.id) - order.indexOf(b.id));
+      persistCosts(); renderCosts();
+    }
+    box.addEventListener('pointerup', end);
+    box.addEventListener('pointercancel', end);
+  })();
 
   // register service worker for offline use / installation
   if('serviceWorker' in navigator){
