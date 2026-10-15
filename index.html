@@ -758,6 +758,24 @@
   .cost-hint{ font-size:12px; color: var(--ink-soft); text-align:center; margin: 6px 0 12px; }
   .cost-add-row{ display:flex; gap:8px; margin-bottom:10px; }
   .cost-add-row button{ flex:1; }
+  .pick-head{ display:flex; justify-content:space-between; align-items:center; margin: 4px 0 6px; }
+  .pick-head .section-label{ margin:0; }
+  .pick-links button{ width:auto; background:none; color: var(--ink-soft); text-decoration:underline; text-underline-offset:3px; padding:4px 6px; font-size:11.5px; letter-spacing:0.05em; }
+  .pick-links button:hover{ background:none; color: var(--ink); }
+  .pick-list{ max-height: 240px; overflow-y:auto; margin-bottom: 14px; }
+  .pick-row{
+    width:100%; display:flex; align-items:center; gap:10px; text-align:left;
+    background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%); color: var(--ink);
+    border:2px solid transparent; border-radius:10px; padding:9px 12px; margin-bottom:6px;
+    text-transform:none; letter-spacing:normal; font-weight:400; font-size:13.5px;
+  }
+  .pick-row:hover{ background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%); }
+  .pick-row.on{ border-color: var(--brass); }
+  .pick-row .pk-box{ font-size:18px; line-height:1; color: var(--ink-soft); }
+  .pick-row.on .pk-box{ color: var(--brass); }
+  .pick-row .pk-main{ flex:1; min-width:0; }
+  .pick-row .pk-sub{ font-size:11.5px; color: var(--ink-soft); }
+  .pick-row .pk-amt{ font-family:'IBM Plex Mono',monospace; font-weight:600; }
   .cost-empty{ text-align:center; color: var(--ink-soft); font-size:13px; padding:10px 0; }
 </style>
 </head>
@@ -962,6 +980,12 @@
       <div class="sub" id="costPayoutSub"></div>
       <div class="sub" id="costLeft"></div>
     </div>
+
+    <div class="pick-head">
+      <p class="section-label">Weeks to count</p>
+      <span class="pick-links"><button type="button" id="pickAllBtn">All</button><button type="button" id="pickNoneBtn">None</button></span>
+    </div>
+    <div class="pick-list" id="pickList"></div>
 
     <div class="cost-card" id="fixedCard">
       <div class="cost-head">
@@ -2551,13 +2575,15 @@
   const costsView = document.getElementById('costsView');
   const costsBtn = document.getElementById('costsBtn');
   const costsToggleBtn = document.getElementById('costsToggleBtn');
-  let costs = { enabled:false, fixed:[], items:[] };
+  let costs = { enabled:false, fixed:[], items:[], weeks:[], colls:[] };
   try{
     const c = JSON.parse(localStorage.getItem(COSTS_KEY) || 'null');
     if(c && typeof c === 'object'){
       costs.enabled = !!c.enabled;
       costs.fixed = Array.isArray(c.fixed) ? c.fixed.filter(x => x && x.amount > 0) : [];
       costs.items = Array.isArray(c.items) ? c.items.filter(x => x && x.amount > 0) : [];
+      costs.weeks = Array.isArray(c.weeks) ? c.weeks.filter(x => typeof x === 'string') : [];
+      costs.colls = Array.isArray(c.colls) ? c.colls.filter(x => typeof x === 'string') : [];
     }
   }catch(e){}
   function persistCosts(){ try{ localStorage.setItem(COSTS_KEY, JSON.stringify(costs)); }catch(e){} }
@@ -2567,9 +2593,22 @@
   }
   function toCents(v){ return Math.round(v * 100); }
 
+  // gross amount (from Overview) of the weeks / saved collections picked on the Costs page
+  function costsGross(){
+    const keys = new Set(getAllWeekKeys());
+    let g = 0, n = 0;
+    costs.weeks.forEach(wk => { if(keys.has(wk)){ g += getWeekAggregate(wk).amount; n++; } });
+    costs.colls.forEach(id => {
+      const c = collections.find(x => x.id === id);
+      if(c){ g += c.weeks.reduce((a,w) => a + w.amount, 0); n++; }
+    });
+    return { gross: g, n };
+  }
+
   function computeCosts(){
     const pct = getTaxPct();
-    const payoutC = Math.round(savedTotal * (1 - pct/100) * 100);
+    const cg = costsGross();
+    const payoutC = Math.round(cg.gross * (1 - pct/100) * 100);
     const fixedC = costs.fixed.reduce((a,x) => a + toCents(x.amount), 0);
     const fixedGreen = payoutC >= fixedC;
     let left = fixedGreen ? payoutC - fixedC : 0;
@@ -2582,15 +2621,18 @@
       blocked = true;
       return st;
     });
-    return { pct, payoutC, fixedC, fixedGreen, fixedToGo: Math.max(0, fixedC - payoutC), leftC: left, itemStates };
+    return { pct, gross: cg.gross, n: cg.n, payoutC, fixedC, fixedGreen, fixedToGo: Math.max(0, fixedC - payoutC), leftC: left, itemStates };
   }
 
   function renderCosts(){
     const r = computeCosts();
     document.getElementById('costPayout').textContent = money2(r.payoutC);
-    document.getElementById('costPayoutSub').textContent = r.pct > 0
-      ? 'payout after ' + r.pct + '% tax'
-      : 'No tax rate set — full amount counts as payout';
+    document.getElementById('costPayoutSub').textContent = r.n === 0
+      ? 'Pick the weeks to count below'
+      : (r.pct > 0
+        ? r.n + (r.n === 1 ? ' week' : ' weeks/saved') + ' · ' + fmtMoney0(r.gross) + ' − ' + r.pct + '% tax'
+        : r.n + (r.n === 1 ? ' week' : ' weeks/saved') + ' · no tax rate set, full amount counts as payout');
+    renderPickList();
     const leftEl = document.getElementById('costLeft');
     const allGreen = r.fixedGreen && r.itemStates.every(x => x.green);
     leftEl.textContent = allGreen ? ('left over: ' + money2(r.leftC)) : '';
@@ -2629,6 +2671,52 @@
     }
     document.getElementById('costHint').style.display = costs.items.length > 1 ? '' : 'none';
   }
+
+  function renderPickList(){
+    const box = document.getElementById('pickList');
+    const weekKeys = getAllWeekKeys().sort().reverse();
+    if(!weekKeys.length && !collections.length){
+      box.innerHTML = '<div class="cost-empty">No weeks in Overview yet.</div>';
+      return;
+    }
+    const pct = getTaxPct();
+    let html = '';
+    weekKeys.forEach(wk => {
+      const agg = getWeekAggregate(wk);
+      const [y, w] = wk.split('-W');
+      const on = costs.weeks.includes(wk);
+      const start = weekKeyToMonday(wk), end = new Date(start); end.setDate(end.getDate() + 6);
+      html += '<button type="button" class="pick-row' + (on ? ' on' : '') + '" data-pick="week" data-key="' + wk + '">' +
+        '<span class="pk-box">' + (on ? '☑' : '☐') + '</span>' +
+        '<span class="pk-main">Week ' + parseInt(w,10) + ' · ' + y + '<div class="pk-sub">' + fmtShortDate(start) + ' – ' + fmtShortDate(end) + '</div></span>' +
+        '<span class="pk-amt">' + fmtMoney0(pct > 0 ? taxSplit(agg.amount).net : agg.amount) + '</span></button>';
+    });
+    collections.slice().reverse().forEach(c => {
+      const amt = c.weeks.reduce((a,x) => a + x.amount, 0);
+      const on = costs.colls.includes(c.id);
+      html += '<button type="button" class="pick-row' + (on ? ' on' : '') + '" data-pick="coll" data-key="' + c.id + '">' +
+        '<span class="pk-box">' + (on ? '☑' : '☐') + '</span>' +
+        '<span class="pk-main">' + escapeHtml(c.name) + '<div class="pk-sub">Saved · ' + c.weeks.length + (c.weeks.length === 1 ? ' week' : ' weeks') + '</div></span>' +
+        '<span class="pk-amt">' + fmtMoney0(pct > 0 ? taxSplit(amt).net : amt) + '</span></button>';
+    });
+    box.innerHTML = html;
+  }
+  document.getElementById('pickList').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-pick]');
+    if(!b) return;
+    const arr = b.dataset.pick === 'week' ? costs.weeks : costs.colls;
+    const i = arr.indexOf(b.dataset.key);
+    if(i >= 0) arr.splice(i, 1); else arr.push(b.dataset.key);
+    persistCosts(); renderCosts();
+  });
+  document.getElementById('pickAllBtn').addEventListener('click', () => {
+    costs.weeks = getAllWeekKeys(); costs.colls = collections.map(c => c.id);
+    persistCosts(); renderCosts();
+  });
+  document.getElementById('pickNoneBtn').addEventListener('click', () => {
+    costs.weeks = []; costs.colls = [];
+    persistCosts(); renderCosts();
+  });
 
   function applyCostsEnabled(){
     costsBtn.style.display = costs.enabled ? '' : 'none';
