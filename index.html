@@ -776,6 +776,19 @@
   .pick-row .pk-main{ flex:1; min-width:0; }
   .pick-row .pk-sub{ font-size:11.5px; color: var(--ink-soft); }
   .pick-row .pk-amt{ font-family:'IBM Plex Mono',monospace; font-weight:600; }
+  .fixed-note{ font-size:11.5px; color: var(--ink-soft); margin-top:6px; }
+  #lockBtn:disabled{ opacity:0.4; cursor:default; }
+  .lock-hint{ font-size:12px; color: var(--ink-soft); text-align:center; margin: -2px 0 12px; min-height:1em; }
+  .lock-card .lock-items{ margin:8px 0 4px; border-top:1px dashed rgba(128,128,128,0.4); padding-top:6px; }
+  .lock-row{ display:flex; justify-content:space-between; gap:10px; font-size:13.5px; padding:2px 0; }
+  .fix-badge{ font-size:10px; letter-spacing:0.06em; text-transform:uppercase; background: var(--brass); color: var(--ink); border-radius:6px; padding:1px 6px; margin-left:6px; vertical-align:middle; }
+  .lock-actions{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .lock-actions button{ flex:1; min-width:96px; padding:9px 8px; font-size:11.5px; }
+  .lock-actions button.armed{ background: var(--rust); color:#fff; }
+  .hist-card{ opacity:0.9; border-color: rgba(128,128,128,0.5); background: rgba(128,128,128,0.08); }
+  .cost-card.hist-card .cost-state{ color: var(--ink-soft); }
+  .modal-box .lock-check{ display:flex; align-items:center; gap:10px; text-transform:none; letter-spacing:normal; font-size:13.5px; margin: 12px 0 16px; }
+  .modal-box .lock-check input{ width:auto; margin:0; }
   .cost-empty{ text-align:center; color: var(--ink-soft); font-size:13px; padding:10px 0; }
 </style>
 </head>
@@ -994,6 +1007,7 @@
       </div>
       <div class="cost-state" id="fixedState"></div>
       <div class="fixed-list" id="fixedList"></div>
+      <div class="fixed-note" id="fixedNote">↻ Fixed costs repeat every pay period and are counted again after you lock.</div>
     </div>
     <div class="cost-add-row">
       <button type="button" id="addFixedBtn" class="btn-add">+ Add fixed cost</button>
@@ -1004,6 +1018,25 @@
     <div class="cost-hint" id="costHint">Drag ☰ to reorder — the top one turns green first.</div>
     <div class="cost-add-row">
       <button type="button" id="addItemBtn" class="btn-add">+ Add item</button>
+    </div>
+    <div class="cost-add-row">
+      <button type="button" id="lockBtn">🔒 Lock green costs</button>
+    </div>
+    <div class="lock-hint" id="lockHint"></div>
+    <div id="lockedSection"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="lockModal">
+  <div class="modal-box">
+    <h3>Lock green costs</h3>
+    <p id="lockText"></p>
+    <label for="lockName">Name (e.g. month)</label>
+    <input type="text" id="lockName" placeholder="e.g. November">
+    <label class="lock-check" id="lockCarryRow"><input type="checkbox" id="lockCarry" checked><span id="lockCarryText"></span></label>
+    <div class="modal-actions">
+      <button id="lockConfirmBtn">Lock</button>
+      <button id="lockCancelBtn" class="modal-cancel">Cancel</button>
     </div>
   </div>
 </div>
@@ -1314,7 +1347,6 @@
       totalPausedMs = s.totalPausedMs || 0;
       inputMode = s.inputMode === 'hours' ? 'hours' : 'times';
       if(s.hours) hoursInput.value = s.hours;
-      if(s.hoursDate) hoursDate.value = s.hoursDate;
       if(s.taxPct !== undefined && s.taxPct !== '') taxPctInput.value = s.taxPct;
       if(s.periodHours) periodHoursInput.value = s.periodHours;
       if(s.periodType === 'month') periodTypeInput.value = 'month';
@@ -1389,6 +1421,16 @@
     modeToggle.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === inputMode));
     if(!hoursDate.value) hoursDate.value = toLocalInputValue(new Date()).slice(0,10);
   }
+  // hours-only mode: always start on today's date, and refresh it when the app
+  // is reopened (as long as no hours are being typed in)
+  function setHoursDateToday(){
+    hoursDate.value = toLocalInputValue(new Date()).slice(0,10);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible' && hoursInput.value === ''){
+      setHoursDateToday(); saveState(); render();
+    }
+  });
 
   modeToggle.addEventListener('click', (e) => {
     const btn = e.target.closest('.mode-btn');
@@ -2575,7 +2617,7 @@
   const costsView = document.getElementById('costsView');
   const costsBtn = document.getElementById('costsBtn');
   const costsToggleBtn = document.getElementById('costsToggleBtn');
-  let costs = { enabled:false, fixed:[], items:[], weeks:[], colls:[] };
+  let costs = { enabled:false, fixed:[], items:[], weeks:[], colls:[], periods:[], paidWeeks:[], paidColls:[], carryC:0 };
   try{
     const c = JSON.parse(localStorage.getItem(COSTS_KEY) || 'null');
     if(c && typeof c === 'object'){
@@ -2584,6 +2626,10 @@
       costs.items = Array.isArray(c.items) ? c.items.filter(x => x && x.amount > 0) : [];
       costs.weeks = Array.isArray(c.weeks) ? c.weeks.filter(x => typeof x === 'string') : [];
       costs.colls = Array.isArray(c.colls) ? c.colls.filter(x => typeof x === 'string') : [];
+      costs.periods = Array.isArray(c.periods) ? c.periods.filter(p => p && Array.isArray(p.items)) : [];
+      costs.paidWeeks = Array.isArray(c.paidWeeks) ? c.paidWeeks.filter(x => typeof x === 'string') : [];
+      costs.paidColls = Array.isArray(c.paidColls) ? c.paidColls.filter(x => typeof x === 'string') : [];
+      costs.carryC = c.carryC > 0 ? Math.round(c.carryC) : 0;
     }
   }catch(e){}
   function persistCosts(){ try{ localStorage.setItem(COSTS_KEY, JSON.stringify(costs)); }catch(e){} }
@@ -2594,21 +2640,47 @@
   function toCents(v){ return Math.round(v * 100); }
 
   // gross amount (from Overview) of the weeks / saved collections picked on the Costs page
+  // weeks / collections already used by a locked or paid period
+  function consumedWeeks(){
+    const set = new Set(costs.paidWeeks);
+    costs.periods.forEach(p => (p.weeks || []).forEach(w => set.add(w)));
+    return set;
+  }
+  function consumedColls(){
+    const set = new Set(costs.paidColls);
+    costs.periods.forEach(p => (p.colls || []).forEach(c => set.add(c.id)));
+    return set;
+  }
   function costsGross(){
     const keys = new Set(getAllWeekKeys());
-    let g = 0, n = 0;
-    costs.weeks.forEach(wk => { if(keys.has(wk)){ g += getWeekAggregate(wk).amount; n++; } });
+    const usedW = consumedWeeks(), usedC = consumedColls();
+    let g = 0;
+    const ws = [], cs = [];
+    costs.weeks.forEach(wk => { if(keys.has(wk) && !usedW.has(wk)){ g += getWeekAggregate(wk).amount; ws.push(wk); } });
     costs.colls.forEach(id => {
       const c = collections.find(x => x.id === id);
-      if(c){ g += c.weeks.reduce((a,w) => a + w.amount, 0); n++; }
+      if(c && !usedC.has(id)){ g += c.weeks.reduce((a,w) => a + w.amount, 0); cs.push({ id, name: c.name }); }
     });
-    return { gross: g, n };
+    return { gross: g, n: ws.length + cs.length, ws, cs };
+  }
+  function weeksLabel(weeks, colls){
+    const ks = (weeks || []).slice().sort();
+    let t = '';
+    if(ks.length === 1){ const [y,w] = ks[0].split('-W'); t = 'Week ' + parseInt(w,10) + ' · ' + y; }
+    else if(ks.length > 1){
+      const [y1,w1] = ks[0].split('-W'), [y2,w2] = ks[ks.length-1].split('-W');
+      t = y1 === y2 ? 'Weeks ' + parseInt(w1,10) + '–' + parseInt(w2,10) + ' · ' + y1
+                    : 'Weeks ' + parseInt(w1,10) + ' (' + y1 + ')–' + parseInt(w2,10) + ' (' + y2 + ')';
+    }
+    const cn = (colls || []).map(c => c.name);
+    if(cn.length) t += (t ? ' + ' : '') + cn.join(', ');
+    return t || '—';
   }
 
   function computeCosts(){
     const pct = getTaxPct();
     const cg = costsGross();
-    const payoutC = Math.round(cg.gross * (1 - pct/100) * 100);
+    const payoutC = Math.round(cg.gross * (1 - pct/100) * 100) + costs.carryC;
     const fixedC = costs.fixed.reduce((a,x) => a + toCents(x.amount), 0);
     const fixedGreen = payoutC >= fixedC;
     let left = fixedGreen ? payoutC - fixedC : 0;
@@ -2621,18 +2693,20 @@
       blocked = true;
       return st;
     });
-    return { pct, gross: cg.gross, n: cg.n, payoutC, fixedC, fixedGreen, fixedToGo: Math.max(0, fixedC - payoutC), leftC: left, itemStates };
+    return { pct, gross: cg.gross, n: cg.n, ws: cg.ws, cs: cg.cs, payoutC, fixedC, fixedGreen, fixedToGo: Math.max(0, fixedC - payoutC), leftC: left, itemStates };
   }
 
   function renderCosts(){
     const r = computeCosts();
     document.getElementById('costPayout').textContent = money2(r.payoutC);
-    document.getElementById('costPayoutSub').textContent = r.n === 0
+    document.getElementById('costPayoutSub').textContent = (r.n === 0
       ? 'Pick the weeks to count below'
       : (r.pct > 0
         ? r.n + (r.n === 1 ? ' week' : ' weeks/saved') + ' · ' + fmtMoney0(r.gross) + ' − ' + r.pct + '% tax'
-        : r.n + (r.n === 1 ? ' week' : ' weeks/saved') + ' · no tax rate set, full amount counts as payout');
+        : r.n + (r.n === 1 ? ' week' : ' weeks/saved') + ' · no tax rate set, full amount counts as payout'))
+      + (costs.carryC > 0 ? ' · incl. ' + money2(costs.carryC) + ' carried over' : '');
     renderPickList();
+    renderLockArea(r);
     const leftEl = document.getElementById('costLeft');
     const allGreen = r.fixedGreen && r.itemStates.every(x => x.green);
     leftEl.textContent = allGreen ? ('left over: ' + money2(r.leftC)) : '';
@@ -2640,6 +2714,7 @@
     const fixedCard = document.getElementById('fixedCard');
     fixedCard.classList.toggle('green', r.fixedGreen);
     document.getElementById('fixedTotal').textContent = money2(r.fixedC);
+    document.getElementById('fixedNote').style.display = costs.fixed.length ? '' : 'none';
     document.getElementById('fixedState').textContent = r.fixedC === 0
       ? 'No fixed costs added yet'
       : (r.fixedGreen ? 'Covered ✓' : money2(r.fixedToGo) + ' to go');
@@ -2672,11 +2747,133 @@
     document.getElementById('costHint').style.display = costs.items.length > 1 ? '' : 'none';
   }
 
+  const sumC = list => list.reduce((a,x) => a + toCents(x.amount), 0);
+  let lockPlan = null;
+
+  function renderLockArea(r){
+    const greenItems = costs.items.filter((it,i) => r.itemStates[i].green);
+    const canLock = r.n > 0 && r.fixedGreen && (r.fixedC > 0 || greenItems.length > 0);
+    const btn = document.getElementById('lockBtn');
+    btn.disabled = !canLock;
+    document.getElementById('lockHint').textContent = canLock
+      ? 'Locks ' + greenItems.length + ' green item' + (greenItems.length === 1 ? '' : 's') + ' + fixed costs, and uses the picked weeks.'
+      : 'Pick weeks and cover your fixed costs to lock.';
+    lockPlan = canLock ? { r, greenItems } : null;
+
+    const box = document.getElementById('lockedSection');
+    const open = costs.periods.filter(p => !p.paid).slice().reverse();
+    const hist = costs.periods.filter(p => p.paid).slice().reverse();
+    const lastId = costs.periods.length ? costs.periods[costs.periods.length - 1].id : null;
+    const itemsHtml = p => p.items.map(x =>
+      '<div class="lock-row"><span>' + escapeHtml(x.name) + (x.fixed ? '<span class="fix-badge">Fixed</span>' : '') + '</span><span>' + money2(toCents(x.amount)) + '</span></div>').join('');
+    let html = '';
+    if(open.length){
+      html += '<p class="section-label">Locked</p>';
+      open.forEach(p => {
+        html += '<div class="cost-card green lock-card" data-pid="' + p.id + '">' +
+          '<div class="cost-head"><span class="cost-name">🔒 ' + escapeHtml(p.name) + '</span><span class="cost-amt">' + money2(p.lockedC) + '</span></div>' +
+          '<div class="cost-state">' + escapeHtml(weeksLabel(p.weeks, p.colls)) + ' · payout ' + money2(p.payoutC) + ' · left ' + money2(p.leftC) + '</div>' +
+          '<div class="lock-items">' + itemsHtml(p) + '</div>' +
+          '<div class="lock-actions">' +
+            '<button type="button" data-act="paid-save">Paid · keep</button>' +
+            '<button type="button" data-act="paid-del" data-arm="Confirm delete?">Paid · delete</button>' +
+            (p.id === lastId ? '<button type="button" data-act="unlock" data-arm="Confirm unlock?">Unlock</button>' : '') +
+          '</div></div>';
+      });
+    }
+    if(hist.length){
+      html += '<p class="section-label">Paid history</p>';
+      hist.forEach(p => {
+        html += '<div class="cost-card hist-card lock-card" data-pid="' + p.id + '">' +
+          '<div class="cost-head"><span class="cost-name">✓ ' + escapeHtml(p.name) + '</span><span class="cost-amt">' + money2(p.lockedC) + '</span></div>' +
+          '<div class="cost-state">' + escapeHtml(weeksLabel(p.weeks, p.colls)) + '</div>' +
+          '<div class="lock-items">' + itemsHtml(p) + '</div>' +
+          '<div class="lock-actions"><button type="button" data-act="hist-del" data-arm="Confirm delete?">Delete</button></div></div>';
+      });
+    }
+    box.innerHTML = html;
+  }
+
+  const lockModal = document.getElementById('lockModal');
+  document.getElementById('lockBtn').addEventListener('click', () => {
+    if(!lockPlan) return;
+    const { r, greenItems } = lockPlan;
+    const greenC = sumC(greenItems);
+    document.getElementById('lockText').textContent =
+      'Locks fixed costs (' + money2(r.fixedC) + ') and ' + greenItems.length + ' green item' + (greenItems.length === 1 ? '' : 's') +
+      ' (' + money2(greenC) + '). The picked weeks are used up. Fixed costs stay in the list for the next pay period.';
+    document.getElementById('lockName').value = new Date().toLocaleString('en-GB', { month:'long' });
+    const row = document.getElementById('lockCarryRow');
+    row.style.display = r.leftC > 0 ? '' : 'none';
+    document.getElementById('lockCarry').checked = true;
+    document.getElementById('lockCarryText').textContent = 'Carry over ' + money2(r.leftC) + ' left to the next period';
+    lockModal.classList.add('show');
+  });
+  document.getElementById('lockCancelBtn').addEventListener('click', () => lockModal.classList.remove('show'));
+  document.getElementById('lockConfirmBtn').addEventListener('click', () => {
+    if(!lockPlan) { lockModal.classList.remove('show'); return; }
+    const { r, greenItems } = lockPlan;
+    const name = document.getElementById('lockName').value.trim() || 'Locked';
+    const carry = document.getElementById('lockCarry').checked && r.leftC > 0;
+    const snapshot = [
+      ...costs.fixed.map(x => ({ name:x.name, amount:x.amount, fixed:true })),
+      ...greenItems.map(x => ({ name:x.name, amount:x.amount, fixed:false }))
+    ];
+    costs.periods.push({
+      id: newCostId(), name, paid:false,
+      weeks: r.ws, colls: r.cs,
+      payoutC: r.payoutC, carryInC: costs.carryC,
+      fixedC: r.fixedC, lockedC: r.fixedC + sumC(greenItems), leftC: r.leftC,
+      items: snapshot
+    });
+    const greenIds = new Set(greenItems.map(x => x.id));
+    costs.items = costs.items.filter(x => !greenIds.has(x.id));
+    costs.weeks = []; costs.colls = [];
+    costs.carryC = carry ? r.leftC : 0;
+    persistCosts();
+    lockModal.classList.remove('show');
+    renderCosts();
+  });
+
+  const lockArmed = {};
+  document.getElementById('lockedSection').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]');
+    const card = e.target.closest('[data-pid]');
+    if(!b || !card) return;
+    const pid = card.dataset.pid, act = b.dataset.act, key = pid + act;
+    if(b.dataset.arm && !lockArmed[key]){
+      b.dataset.label = b.textContent; b.classList.add('armed'); b.textContent = b.dataset.arm;
+      lockArmed[key] = setTimeout(() => { delete lockArmed[key]; b.classList.remove('armed'); b.textContent = b.dataset.label; }, ARM_TIMEOUT_MS);
+      return;
+    }
+    if(lockArmed[key]){ clearTimeout(lockArmed[key]); delete lockArmed[key]; }
+    const i = costs.periods.findIndex(p => p.id === pid);
+    if(i < 0) return;
+    const p = costs.periods[i];
+    const markUsed = () => {
+      p.weeks.forEach(w => { if(!costs.paidWeeks.includes(w)) costs.paidWeeks.push(w); });
+      (p.colls || []).forEach(c => { if(!costs.paidColls.includes(c.id)) costs.paidColls.push(c.id); });
+    };
+    if(act === 'paid-save'){ markUsed(); p.paid = true; }
+    else if(act === 'paid-del'){ markUsed(); costs.periods.splice(i, 1); }
+    else if(act === 'hist-del'){ costs.periods.splice(i, 1); }
+    else if(act === 'unlock'){
+      if(i !== costs.periods.length - 1 || p.paid) return;
+      const back = p.items.filter(x => !x.fixed).map(x => ({ id:newCostId(), name:x.name, amount:x.amount }));
+      costs.items = back.concat(costs.items);
+      costs.carryC = p.carryInC || 0;
+      costs.periods.splice(i, 1);
+    }
+    persistCosts(); renderCosts();
+  });
+
   function renderPickList(){
     const box = document.getElementById('pickList');
-    const weekKeys = getAllWeekKeys().sort().reverse();
-    if(!weekKeys.length && !collections.length){
-      box.innerHTML = '<div class="cost-empty">No weeks in Overview yet.</div>';
+    const usedW = consumedWeeks(), usedC = consumedColls();
+    const weekKeys = getAllWeekKeys().filter(k => !usedW.has(k)).sort().reverse();
+    const collsLeft = collections.filter(c => !usedC.has(c.id));
+    if(!weekKeys.length && !collsLeft.length){
+      box.innerHTML = '<div class="cost-empty">No unused weeks in Overview.</div>';
       return;
     }
     const pct = getTaxPct();
@@ -2691,7 +2888,7 @@
         '<span class="pk-main">Week ' + parseInt(w,10) + ' · ' + y + '<div class="pk-sub">' + fmtShortDate(start) + ' – ' + fmtShortDate(end) + '</div></span>' +
         '<span class="pk-amt">' + fmtMoney0(pct > 0 ? taxSplit(agg.amount).net : agg.amount) + '</span></button>';
     });
-    collections.slice().reverse().forEach(c => {
+    collsLeft.slice().reverse().forEach(c => {
       const amt = c.weeks.reduce((a,x) => a + x.amount, 0);
       const on = costs.colls.includes(c.id);
       html += '<button type="button" class="pick-row' + (on ? ' on' : '') + '" data-pick="coll" data-key="' + c.id + '">' +
@@ -2710,7 +2907,8 @@
     persistCosts(); renderCosts();
   });
   document.getElementById('pickAllBtn').addEventListener('click', () => {
-    costs.weeks = getAllWeekKeys(); costs.colls = collections.map(c => c.id);
+    const uw = consumedWeeks(), uc = consumedColls();
+    costs.weeks = getAllWeekKeys().filter(k => !uw.has(k)); costs.colls = collections.filter(c => !uc.has(c.id)).map(c => c.id);
     persistCosts(); renderCosts();
   });
   document.getElementById('pickNoneBtn').addEventListener('click', () => {
